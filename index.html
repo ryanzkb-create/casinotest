@@ -2,37 +2,62 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>The House Always Wins</title>
-  <meta name="description" content="A casino life simulator that shows why gambling always loses money.">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Golden Mirage</title>
+  <meta name="description" content="A 3D casino life simulator that shows why gambling always loses money.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;600&display=swap">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <canvas id="game3d" class="hidden"></canvas>
   <canvas id="game"></canvas>
+  <div id="bubbles"></div>
+  <div id="hurt"></div>
 
-  <div id="hud">
-    <div class="hud-panel money">
-      <div class="row"><span>Cash</span><b id="h-cash"></b></div>
-      <div class="row"><span>Debt</span><b id="h-debt"></b></div>
-      <div class="row"><span>Net vs start</span><b id="h-net"></b></div>
-      <div id="debt-meter" class="hidden" title="Game over at $1,000,000 debt">
-        <div class="meter"><div id="b-debt"></div></div>
-        <small>Debt limit $1M</small>
+  <!-- Top right: money, debt, time, weapon (GTA style) -->
+  <div id="hud-top">
+    <div class="hud-row">
+      <div id="weapon" title="Unarmed">✋</div>
+      <div class="money-block">
+        <div id="h-cash" class="cash"></div>
+        <div class="debt-line"><span>DEBT</span> <b id="h-debt"></b></div>
       </div>
     </div>
-    <div class="hud-panel vitals">
-      <div class="vital"><span>🍔</span><div class="bar"><div id="b-hunger" class="fill hunger"></div></div></div>
-      <div class="vital"><span>💧</span><div class="bar"><div id="b-thirst" class="fill thirst"></div></div></div>
-      <div class="vital"><span>⚡</span><div class="bar"><div id="b-energy" class="fill energy"></div></div></div>
-      <div class="row small"><span id="h-time"></span><span class="tier">🎟️ <span id="h-tier"></span></span></div>
+    <div id="heat" title="Tony's heat"></div>
+    <div class="sub-line"><span id="h-time"></span> · <span class="tier">🎟 <span id="h-tier"></span></span></div>
+    <div class="sub-line net">NET <b id="h-net"></b></div>
+    <div id="debt-meter" class="hidden" title="Game over at $1,000,000 debt">
+      <div class="meter"><div id="b-debt"></div></div>
+      <small>DEBT LIMIT $1M</small>
     </div>
   </div>
 
-  <div id="top-buttons">
-    <button id="helpBtn" title="How to play">❔</button>
+  <!-- Bottom left: radar + health, armour and needs -->
+  <div id="hud-radar">
+    <canvas id="minimap"></canvas>
+    <div class="hbars">
+      <div class="hbar health" title="Health"><div id="b-health"></div></div>
+      <div class="hbar armor" title="Armor"><div id="b-armor"></div></div>
+    </div>
+    <div class="vitals">
+      <div class="vital" title="Hunger"><span>🍔</span><div class="bar"><div id="b-hunger" class="fill hunger"></div></div></div>
+      <div class="vital" title="Thirst"><span>💧</span><div class="bar"><div id="b-thirst" class="fill thirst"></div></div></div>
+      <div class="vital" title="Energy"><span>⚡</span><div class="bar"><div id="b-energy" class="fill energy"></div></div></div>
+    </div>
+  </div>
+
+  <div id="corner-buttons">
+    <button id="helpBtn" title="How to play">?</button>
+  </div>
+  <div id="action-buttons">
+    <button id="fireBtn" class="hidden" title="Fire (F)">FIRE</button>
+    <button id="weaponBtn" title="Switch weapon (Q)">Q</button>
     <button id="phoneBtn" title="Phone (P)">📱<span id="badge" class="hidden">0</span></button>
   </div>
 
+  <div id="zone"></div>
   <div id="prompt" class="hidden"></div>
   <div id="toasts"></div>
 
@@ -58,9 +83,20 @@
   <script src="js/state.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/world.js"></script>
+  <script src="js/npcs.js"></script>
+  <script src="js/combat.js"></script>
   <script src="js/games.js"></script>
   <script src="js/phone.js"></script>
   <script src="js/services.js"></script>
   <script src="js/main.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="js/render3d.js"></script>
 </body>
 </html>

@@ -1,6 +1,5 @@
 'use strict';
 
-const canvas = document.getElementById('game');
 
 function startGame() {
   S = newState();
@@ -12,28 +11,31 @@ function startGame() {
   hideScreen();
   addMsg('🎩 Casino Host', `Welcome to the Golden Mirage! Your ${fmt(CONFIG.START_CASH)} is loaded on your players card. Good luck! 🍀`);
   S.unread = 1;
+  updateWeaponHUD();
   updateHUD(true);
 }
 
 function showIntro() {
   const s = showScreen(`
-    <h1>🎰 The House Always Wins</h1>
-    <p class="tagline">You just arrived in Las Vegas with <b>${fmt(CONFIG.START_CASH)}</b>. Try to keep it.</p>
+    <div class="intro-kicker">LAS VEGAS · THE STRIP · 8:00 PM</div>
+    <h1>Golden Mirage</h1>
+    <p class="tagline">You just arrived with <b>${fmt(CONFIG.START_CASH)}</b>. The house has never lost. Try to keep it.</p>
     <div class="intro-grid">
-      <div><h3>🎮 Controls</h3>
-        <p><b>WASD / Arrow keys</b> or <b>tap/click</b> to walk.<br>
-        <b>E</b> / <b>Space</b> or tap an object to use it.<br>
-        <b>P</b> or 📱 to open your phone.</p></div>
-      <div><h3>🧍 Survive</h3>
-        <p>Watch your <b>hunger</b>, <b>thirst</b> and <b>energy</b>. Eat at the food court, drink at the bar, sleep at the hotel (or on the street). If any hits zero you collapse and get a hospital bill.</p></div>
-      <div><h3>🎲 Gamble</h3>
-        <p>Slots, roulette, blackjack, craps, baccarat and the Big Six wheel, all using <b>real casino odds</b>. Bet enough and the casino gives you free drinks, meals and rooms.</p></div>
-      <div><h3>💸 Debt</h3>
-        <p>Once you are broke, your phone lets you borrow from the <b>bank</b> or from <b>Tony the loan shark</b>. If Tony isn't paid on time, his crew will come for you. <b>Debt over ${fmtShort(CONFIG.GAME_OVER_DEBT)} = game over.</b></p></div>
+      <div><h3>Controls</h3>
+        <p><b>WASD</b> walk · <b>Shift</b> run · <b>drag</b> to turn the camera · <b>scroll</b> or <b>C</b> to zoom.
+        <b>Tap</b> a spot to walk there. <b>E</b> talk / play / use. <b>P</b> phone. <b>Q</b> switch weapon, <b>F</b> fire.</p></div>
+      <div><h3>Survive</h3>
+        <p>Keep your <b>hunger</b>, <b>thirst</b>, <b>energy</b> and <b>health</b> up. Eat, drink, sleep at the hotel or on the street. Talk to the people you meet.</p></div>
+      <div><h3>Gamble</h3>
+        <p>Slots, roulette, blackjack, craps, baccarat and the Big Six wheel, all with <b>real casino odds</b>. Bet big and the casino gives you free drinks, meals and rooms.</p></div>
+      <div><h3>The streets</h3>
+        <p>Robbers wait outside at night, especially for big winners. The <b>gun store</b> on the Strip sells pistols, shotguns and body armor.</p></div>
+      <div><h3>Debt</h3>
+        <p>Broke? Your phone can get a loan from the <b>bank</b> or from <b>Tony the loan shark</b>. Pay Tony late and his crew comes for you. <b>Debt over ${fmtShort(CONFIG.GAME_OVER_DEBT)} ends the game.</b></p></div>
     </div>
-    <p class="warning">⚠️ Every game has a house edge. This game is designed to show you why gambling always loses money in the end. Just like the real thing.</p>
-    <button class="btn primary big" id="start-btn">Enter the casino</button>`);
-  s.querySelector('#start-btn').onclick = () => { hideScreen(); };
+    <p class="warning">Every game here has a house edge. This game shows why gambling always loses money in the end, just like the real thing.</p>
+    <button class="btn primary big" id="start-btn">Walk into the casino</button>`);
+  s.querySelector('#start-btn').onclick = () => { hideScreen(); sfx('far'); };
 }
 
 function endGame(reason) {
@@ -76,6 +78,8 @@ function endGame(reason) {
       <div><span>Interest charged</span><b class="lose">${fmt(st.interest)}</b></div>
       <div><span>Comps received</span><b>${fmt(st.compsValue)}</b></div>
       <div><span>Times collapsed / harassed</span><b>${st.collapses} / ${st.harassed}</b></div>
+      <div><span>Robbed</span><b>${st.robbed}× (${fmt(st.robbedAmount)})</b></div>
+      <div><span>Spent on guns & armor</span><b>${fmt(st.gunSpend)}</b></div>
       <div><span>Final net worth</span><b class="${netWorth() >= 0 ? '' : 'lose'}">${fmt(netWorth())}</b></div>
     </div>
     <p class="warning">The house edge is small on each bet, but it never stops working. The more you bet, the more certain your loss.</p>
@@ -102,10 +106,12 @@ function frame(t) {
 }
 
 function init() {
-  resizeCanvas(canvas);
-  window.addEventListener('resize', () => resizeCanvas(canvas));
-  setupInput(canvas);
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+  setupInput();
   $('#phoneBtn').onclick = () => togglePhone();
+  $('#fireBtn').onclick = () => fireWeapon();
+  $('#weaponBtn').onclick = () => { if (!blocked()) cycleWeapon(); };
   $('#phone-close').onclick = () => closePhone();
   $('#modal-close').onclick = () => closeModal();
   $('#helpBtn').onclick = () => { if (!modalOpen && !phoneOpen) showIntro(); };

@@ -17,6 +17,7 @@ const CONFIG = {
   BANK: { maxTotal: 250_000, rate: 0.002, lateRate: 0.006, termDays: 10, lateFee: 0.10 },
   SHARK: { maxOutstanding: 700_000, rate: 0.10, termDays: 3, extendDays: 2, penalty: 0.05 },
   HOSPITAL_BILL: 8_000,
+  TRAUMA_BILL: 25_000,
   HOTEL_PRICE: 450,
 };
 
@@ -35,6 +36,13 @@ function newState() {
     cash: CONFIG.START_CASH,
     minutes: 20 * 60, // Day 1, 8:00 PM
     hunger: 85, thirst: 80, energy: 90,
+    health: 100, armor: 0,
+    weapons: { pistol: false, shotgun: false },
+    ammo: { pistol: 0, shotgun: 0 },
+    equipped: null,
+    marked: false,          // flashed a big win, robbers notice
+    nextRobber: 20 * 60 + 90,
+    tonyAngry: 0,
     bank: { owed: 0, principal: 0, borrowedTotal: 0, due: null, late: false, credit: 'good' },
     shark: { owed: 0, principal: 0, due: null, overdueDays: 0, nextThug: null, reminded: false },
     medical: 0,
@@ -51,6 +59,7 @@ function newState() {
       wagered: 0, returned: 0, rounds: 0, expectedLoss: 0,
       biggestWin: 0, peakCash: CONFIG.START_CASH, lossStreak: 0,
       games: {}, compsValue: 0, borrowed: 0, interest: 0, harassed: 0, collapses: 0,
+      robbed: 0, robbedAmount: 0, fightsWon: 0, gunSpend: 0,
     },
   };
 }
@@ -115,6 +124,7 @@ function advanceTime(mins, sleeping = false) {
   S.hunger = clamp(S.hunger - CONFIG.DECAY.hunger * mins * f, Math.min(floor, S.hunger), 100);
   S.thirst = clamp(S.thirst - CONFIG.DECAY.thirst * mins * f, Math.min(floor, S.thirst), 100);
   if (!sleeping) S.energy = clamp(S.energy - CONFIG.DECAY.energy * mins, 0, 100);
+  S.health = clamp(S.health + mins * (sleeping ? 0.15 : 0.03), 0, 100); // slow healing
 
   const days = mins / 1440;
   if (S.bank.owed > 0) {
@@ -195,6 +205,10 @@ function settle(game, bet, returned, edge) {
 
   const profit = returned - bet;
   if (profit > st.biggestWin) st.biggestWin = profit;
+  if (profit >= 25_000) {
+    S.marked = true; // people saw you win
+    if (typeof crowdReact === 'function') crowdReact();
+  }
   if (S.cash > st.peakCash) st.peakCash = S.cash;
   st.lossStreak = profit < 0 ? st.lossStreak + 1 : 0;
 

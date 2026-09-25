@@ -1,21 +1,22 @@
 'use strict';
 
 // ---------------------------------------------------------------------------
-// Map layout
+// Map layout (in "map units"; the 3D renderer converts 20 units = 1 metre)
 // ---------------------------------------------------------------------------
 const WORLD = { w: 1800, h: 1240 };
 const CASINO_BOTTOM = 990;
+const DOOR = { x1: 850, x2: 950 };
 
 const ZONES = [
-  { x: 0, y: 0, w: 1800, h: 1004, color: '#2b0d16' },
-  { x: 30, y: 30, w: 560, h: 560, color: '#3a1450', label: 'SLOT MACHINES' },
-  { x: 620, y: 30, w: 440, h: 260, color: '#4a3a0a', label: 'HIGH LIMIT ROOM' },
-  { x: 620, y: 330, w: 740, h: 560, color: '#0f3a24', label: 'TABLE GAMES' },
-  { x: 1400, y: 30, w: 370, h: 380, color: '#4a2a10', label: 'FOOD COURT' },
-  { x: 1400, y: 440, w: 370, h: 220, color: '#102a4a', label: 'THE LUCKY BAR' },
-  { x: 1400, y: 690, w: 370, h: 290, color: '#333642', label: 'HOTEL LOBBY' },
-  { x: 30, y: 620, w: 560, h: 360, color: '#2a2034', label: 'CASHIER & LOUNGE' },
-  { x: 0, y: 1004, w: 1800, h: 126, color: '#5b5b60', label: 'THE STRIP (STREET)' },
+  { x: 0, y: 0, w: 1800, h: 1004, color: '#2b0d16', floor: 'carpet' },
+  { x: 30, y: 30, w: 560, h: 560, color: '#3a1450', label: 'SLOT MACHINES', floor: 'carpetPurple' },
+  { x: 620, y: 30, w: 440, h: 260, color: '#4a3a0a', label: 'HIGH LIMIT ROOM', floor: 'marbleGold' },
+  { x: 620, y: 330, w: 740, h: 560, color: '#0f3a24', label: 'TABLE GAMES', floor: 'carpetGreen' },
+  { x: 1400, y: 30, w: 370, h: 380, color: '#4a2a10', label: 'FOOD COURT', floor: 'tiles' },
+  { x: 1400, y: 440, w: 370, h: 220, color: '#102a4a', label: 'THE LUCKY BAR', floor: 'wood' },
+  { x: 1400, y: 690, w: 370, h: 290, color: '#333642', label: 'HOTEL LOBBY', floor: 'marble' },
+  { x: 30, y: 620, w: 560, h: 360, color: '#2a2034', label: 'CASHIER & LOUNGE', floor: 'carpetBlue' },
+  { x: 0, y: 1004, w: 1800, h: 126, color: '#5b5b60', label: 'THE STRIP', floor: 'sidewalk' },
 ];
 
 const OBJECTS = [];
@@ -27,16 +28,13 @@ function addObj(o) {
 
 function buildWorld() {
   OBJECTS.length = 0;
-  // Slot machines
   for (let r = 0; r < 5; r++)
     for (let c = 0; c < 6; c++)
       addObj({ x: 64 + c * 86, y: 78 + r * 104, w: 44, h: 46, type: 'slots', emoji: '🎰', color: '#6b2a8a' });
 
-  // High limit room
   addObj({ x: 660, y: 100, w: 170, h: 80, type: 'blackjack_hl', emoji: '🃏', label: 'VIP Blackjack', color: '#1d6b3a' });
   addObj({ x: 860, y: 100, w: 170, h: 80, type: 'baccarat_hl', emoji: '🀄', label: 'VIP Baccarat', color: '#1d6b3a' });
 
-  // Table games
   addObj({ x: 660, y: 390, w: 170, h: 90, type: 'roulette', emoji: '🎯', label: 'Roulette', color: '#1d6b3a' });
   addObj({ x: 890, y: 390, w: 170, h: 90, type: 'blackjack', emoji: '🃏', label: 'Blackjack', color: '#1d6b3a' });
   addObj({ x: 1120, y: 390, w: 170, h: 90, type: 'blackjack', emoji: '🃏', label: 'Blackjack', color: '#1d6b3a' });
@@ -44,37 +42,34 @@ function buildWorld() {
   addObj({ x: 920, y: 600, w: 170, h: 90, type: 'baccarat', emoji: '🀄', label: 'Baccarat', color: '#1d6b3a' });
   addObj({ x: 1150, y: 590, w: 120, h: 110, type: 'bigsix', emoji: '🎡', label: 'Big Six Wheel', color: '#7a2a1a' });
 
-  // Food court
   addObj({ x: 1430, y: 90, w: 100, h: 55, type: 'hotdog', emoji: '🌭', label: 'Hot Dogs', color: '#8a5a1a' });
   addObj({ x: 1570, y: 90, w: 170, h: 55, type: 'buffet', emoji: '🍱', label: 'Buffet', color: '#8a5a1a' });
   addObj({ x: 1430, y: 260, w: 150, h: 60, type: 'steak', emoji: '🥩', label: 'Steakhouse', color: '#6a2a1a' });
-  addObj({ x: 1640, y: 250, w: 60, h: 60, emoji: '🪑', color: '#5a3a20' });
+  addObj({ x: 1640, y: 250, w: 60, h: 60, emoji: '🪑', color: '#5a3a20', decor: 'diningTable' });
 
-  // Bar
   addObj({ x: 1430, y: 520, w: 310, h: 50, type: 'bar', emoji: '🍸', label: 'Bar', color: '#2a4a7a' });
 
-  // Hotel
   addObj({ x: 1440, y: 780, w: 200, h: 50, type: 'hotel', emoji: '🛎️', label: 'Front Desk', color: '#555a70' });
-  addObj({ x: 1680, y: 720, w: 60, h: 70, emoji: '🛗', color: '#444' });
+  addObj({ x: 1680, y: 720, w: 60, h: 70, emoji: '🛗', color: '#444', decor: 'elevator' });
 
-  // Lounge
   addObj({ x: 60, y: 670, w: 200, h: 60, type: 'cashier', emoji: '💰', label: 'Cashier Cage', color: '#6a5a2a' });
   addObj({ x: 300, y: 670, w: 50, h: 60, type: 'atm', emoji: '🏧', label: 'ATM', color: '#3a4a5a' });
   addObj({ x: 400, y: 680, w: 40, h: 40, type: 'fountain', emoji: '🚰', label: 'Water', color: '#2a5a7a' });
   addObj({ x: 480, y: 660, w: 80, h: 50, type: 'poster', emoji: '📋', label: 'Help Poster', color: '#6a6a6a' });
   addObj({ x: 70, y: 860, w: 130, h: 44, type: 'noclock', emoji: '🪟', label: 'Where are the clocks?', color: '#3a3a4a' });
+  addObj({ x: 300, y: 850, w: 160, h: 60, emoji: '🛋️', color: '#4a2a3a', decor: 'sofa' });
 
   // Casino front wall with the entrance
-  addObj({ x: 0, y: CASINO_BOTTOM, w: 850, h: 14, color: '#111', wall: true });
-  addObj({ x: 950, y: CASINO_BOTTOM, w: 850, h: 14, color: '#111', wall: true });
+  addObj({ x: 0, y: CASINO_BOTTOM, w: DOOR.x1, h: 14, color: '#111', wall: true });
+  addObj({ x: DOOR.x2, y: CASINO_BOTTOM, w: 1800 - DOOR.x2, h: 14, color: '#111', wall: true });
 
   // Street
   addObj({ x: 90, y: 1036, w: 100, h: 40, type: 'streetsleep', emoji: '📦', label: 'Cardboard spot', color: '#7a6a4a' });
   addObj({ x: 330, y: 1020, w: 200, h: 56, type: 'soup', emoji: '🍲', label: 'Soup Kitchen', color: '#4a6a4a' });
   addObj({ x: 620, y: 1020, w: 160, h: 56, type: 'pawn', emoji: '💍', label: 'Pawn Shop', color: '#6a4a6a' });
   addObj({ x: 1120, y: 1036, w: 36, h: 36, type: 'tap', emoji: '🚰', label: 'Public tap', color: '#2a5a7a' });
+  addObj({ x: 1250, y: 1020, w: 180, h: 56, type: 'gunstore', emoji: '🔫', label: 'Gun Store', color: '#5a4a2a' });
   addObj({ x: 1580, y: 1024, w: 140, h: 52, type: 'busstop', emoji: '🚏', label: 'Bus out of town', color: '#2a6a5a' });
-  // The road is not walkable
   addObj({ x: 0, y: 1130, w: 1800, h: 110, color: '#1e1e22', road: true });
 }
 
@@ -82,25 +77,22 @@ function buildWorld() {
 // Entities
 // ---------------------------------------------------------------------------
 const PLAYER_R = 11;
-const player = { x: 900, y: 1104, speed: 220, dir: 1, moving: false, target: null };
+const player = { x: 900, y: 1104, speed: 160, face: Math.PI, moving: false, target: null, anim: 0, pose: 'stand', shootT: 0 };
 let npcs = [];
-let thug = null;
 let cars = [];
-
-const NPC_EMOJI = ['🧔', '👩', '👨‍🦳', '👵', '🧑', '👱‍♀️', '👨‍💼', '👩‍🦰', '🤠', '🧓'];
-const STAFF_EMOJI = ['🤵', '💁‍♀️'];
+const view = { yaw: 0, zoom: 1 }; // camera yaw (0 = looking north into the casino)
 
 function resetEntities() {
-  player.x = 900; player.y = 1104; player.target = null;
-  thug = null;
-  npcs = [];
-  for (let i = 0; i < 16; i++) {
-    const p = randomWalkable(true);
-    npcs.push({ x: p.x, y: p.y, tx: p.x, ty: p.y, wait: rand(0, 3), speed: rand(40, 80),
-      emoji: i < 3 ? pick(STAFF_EMOJI) : pick(NPC_EMOJI) });
-  }
+  player.x = 900; player.y = 1104; player.target = null; player.face = Math.PI; player.pose = 'stand';
+  view.yaw = 0;
+  spawnNPCs();
   cars = [];
-  for (let i = 0; i < 4; i++) cars.push({ x: rand(0, WORLD.w), lane: i % 2, speed: rand(150, 260), emoji: pick(['🚕', '🚗', '🚙', '🚌', '🚓']) });
+  const CAR_COLORS = ['#c0392b', '#1f3a93', '#f1c40f', '#ecf0f1', '#111111', '#7f8c8d', '#16a085', '#8e44ad'];
+  for (let i = 0; i < 7; i++) cars.push({
+    x: rand(0, WORLD.w), lane: i % 4, speed: rand(160, 300),
+    color: i === 0 ? '#f5c518' : pick(CAR_COLORS), kind: i === 0 ? 'taxi' : pick(['sedan', 'sedan', 'suv', 'sport']),
+  });
+  if (typeof resetCombat === 'function') resetCombat();
 }
 
 function hits(x, y, r = PLAYER_R) {
@@ -112,16 +104,15 @@ function hits(x, y, r = PLAYER_R) {
   return false;
 }
 
-function randomWalkable(insideCasino) {
+function randomWalkable(area) {
   for (let i = 0; i < 200; i++) {
     const x = rand(40, WORLD.w - 40);
-    const y = insideCasino ? rand(40, CASINO_BOTTOM - 30) : rand(40, 1120);
+    const y = area === 'street' ? rand(1082, 1118) : rand(40, CASINO_BOTTOM - 30);
     if (!hits(x, y, 14)) return { x, y };
   }
   return { x: 900, y: 930 };
 }
 
-// Move with axis-separated collision so entities slide along obstacles.
 function moveEntity(e, dx, dy, r = PLAYER_R) {
   let moved = false;
   if (dx && !hits(e.x + dx, e.y, r)) { e.x += dx; moved = true; }
@@ -134,14 +125,33 @@ function distToRect(x, y, o) {
   return Math.hypot(x - cx, y - cy);
 }
 
-function nearbyObject() {
+function isOutside(e = player) { return e.y > CASINO_BOTTOM; }
+
+// Nearest thing you can use: an object or a person to talk to.
+function nearbyTarget() {
   let best = null, bd = 30;
   for (const o of OBJECTS) {
     if (!o.type) continue;
     const d = distToRect(player.x, player.y, o) - PLAYER_R;
     if (d < bd) { bd = d; best = o; }
   }
+  for (const n of npcs) {
+    if (!n.talk || n.pose === 'down') continue;
+    const d = Math.hypot(n.x - player.x, n.y - player.y) - PLAYER_R - 12;
+    if (d < bd - 4) { bd = d; best = n; }
+  }
   return best;
+}
+const nearbyObject = nearbyTarget;
+
+function targetLabel(t) {
+  if (t.role) return `Talk to ${t.name}`;
+  return interactLabel(t);
+}
+
+function useTarget(t) {
+  if (t.role) talkTo(t);
+  else interact(t);
 }
 
 // ---------------------------------------------------------------------------
@@ -153,7 +163,9 @@ function clearMovement() {
   player.target = null;
 }
 
-function setupInput(canvas) {
+function blocked() { return modalOpen || phoneOpen || screenOpen || S.ended; }
+
+function setupInput() {
   window.addEventListener('keydown', e => {
     const k = e.key.toLowerCase();
     if (screenOpen) return;
@@ -167,34 +179,85 @@ function setupInput(canvas) {
     keys[k] = true;
     if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
     if (k === 'e' || k === ' ' || k === 'enter') {
-      const o = nearbyObject();
-      if (o) interact(o);
+      const t = nearbyTarget();
+      if (t) useTarget(t);
     }
+    if (k === 'f') fireWeapon();
+    if (k === 'q') cycleWeapon();
+    if (k === 'c') view.zoom = view.zoom > 1.2 ? 0.7 : view.zoom < 0.9 ? 1 : 1.6;
   });
   window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
   window.addEventListener('blur', clearMovement);
 
-  canvas.addEventListener('pointerdown', e => {
-    if (modalOpen || phoneOpen || screenOpen) return;
-    const rect = canvas.getBoundingClientRect();
-    const wx = e.clientX - rect.left + camera.x;
-    const wy = e.clientY - rect.top + camera.y;
-    const obj = OBJECTS.find(o => o.type && wx >= o.x && wx <= o.x + o.w && wy >= o.y && wy <= o.y + o.h);
-    if (obj && distToRect(player.x, player.y, obj) - PLAYER_R < 30) { interact(obj); return; }
-    if (obj) {
-      // walk to the nearest edge of the object
-      const tx = clamp(player.x, obj.x - 16, obj.x + obj.w + 16);
-      const ty = clamp(player.y, obj.y - 16, obj.y + obj.h + 16);
-      player.target = { x: tx, y: ty, obj };
-    } else {
-      player.target = { x: wx, y: wy, obj: null };
-    }
+  // Pointer: drag to turn the camera, tap to walk/use
+  const surfaces = [document.getElementById('game'), document.getElementById('game3d')];
+  let drag = null;
+  const pinch = new Map();
+  surfaces.forEach(cv => {
+    if (!cv) return;
+    cv.addEventListener('pointerdown', e => {
+      if (blocked()) return;
+      pinch.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: false, id: e.pointerId };
+      cv.setPointerCapture(e.pointerId);
+    });
+    cv.addEventListener('pointermove', e => {
+      if (!drag || blocked()) return;
+      if (pinch.size === 2 && pinch.has(e.pointerId)) {
+        const [a, b] = [...pinch.values()];
+        const before = Math.hypot(a.x - b.x, a.y - b.y);
+        pinch.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        const [c, d] = [...pinch.values()];
+        const after = Math.hypot(c.x - d.x, c.y - d.y);
+        view.zoom = clamp(view.zoom * before / Math.max(1, after), 0.5, 2.2);
+        drag.moved = true;
+        return;
+      }
+      if (e.pointerId !== drag.id) return;
+      if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 8) drag.moved = true;
+      if (drag.moved) view.yaw -= (e.clientX - drag.x) * 0.006;
+      drag.x = e.clientX; drag.y = e.clientY;
+    });
+    const up = e => {
+      pinch.delete(e.pointerId);
+      if (!drag || e.pointerId !== drag.id) return;
+      const wasTap = !drag.moved;
+      drag = null;
+      if (wasTap && !blocked()) tapAt(e.clientX, e.clientY);
+    };
+    cv.addEventListener('pointerup', up);
+    cv.addEventListener('pointercancel', e => { pinch.delete(e.pointerId); drag = null; });
+    cv.addEventListener('wheel', e => {
+      e.preventDefault();
+      view.zoom = clamp(view.zoom * (e.deltaY > 0 ? 1.1 : 0.9), 0.5, 2.2);
+    }, { passive: false });
   });
 
   $('#prompt').addEventListener('click', () => {
-    const o = nearbyObject();
-    if (o && !modalOpen && !phoneOpen) interact(o);
+    const t = nearbyTarget();
+    if (t && !blocked()) useTarget(t);
   });
+}
+
+function tapAt(cx, cy) {
+  let hit;
+  if (window.Render3D && Render3D.ready) hit = Render3D.pick(cx, cy);
+  else {
+    const wx = cx + camera2d.x, wy = cy + camera2d.y;
+    hit = { x: wx, y: wy, target: OBJECTS.find(o => o.type && wx >= o.x && wx <= o.x + o.w && wy >= o.y && wy <= o.y + o.h) || null };
+  }
+  if (!hit) return;
+  const t = hit.target;
+  if (t && t.hostile) { fireWeapon(t); return; }
+  if (t) {
+    const near = t.role ? Math.hypot(t.x - player.x, t.y - player.y) < 45 : distToRect(player.x, player.y, t) - PLAYER_R < 30;
+    if (near) { useTarget(t); return; }
+    if (t.role) player.target = { x: t.x, y: t.y, obj: t };
+    else player.target = {
+      x: clamp(player.x, t.x - 16, t.x + t.w + 16),
+      y: clamp(player.y, t.y - 16, t.y + t.h + 16), obj: t,
+    };
+  } else player.target = { x: hit.x, y: hit.y, obj: null };
 }
 
 // ---------------------------------------------------------------------------
@@ -202,33 +265,45 @@ function setupInput(canvas) {
 // ---------------------------------------------------------------------------
 let stuckTime = 0;
 function updateWorld(dt) {
+  let ix = 0, iy = 0;
+  if (keys['w'] || keys['arrowup']) iy -= 1;
+  if (keys['s'] || keys['arrowdown']) iy += 1;
+  if (keys['a'] || keys['arrowleft']) ix -= 1;
+  if (keys['d'] || keys['arrowright']) ix += 1;
+
   let dx = 0, dy = 0;
-  if (keys['w'] || keys['arrowup']) dy -= 1;
-  if (keys['s'] || keys['arrowdown']) dy += 1;
-  if (keys['a'] || keys['arrowleft']) dx -= 1;
-  if (keys['d'] || keys['arrowright']) dx += 1;
-  if (dx || dy) player.target = null;
+  if (ix || iy) {
+    player.target = null;
+    // camera-relative: forward = away from camera
+    const fx = -Math.sin(view.yaw), fy = -Math.cos(view.yaw);
+    const rx = Math.cos(view.yaw), ry = -Math.sin(view.yaw);
+    dx = rx * ix + fx * -iy;
+    dy = ry * ix + fy * -iy;
+  }
 
   if (player.target) {
     const t = player.target;
-    if (t.obj && distToRect(player.x, player.y, t.obj) - PLAYER_R < 28) {
+    const arrived = t.obj && (t.obj.role
+      ? Math.hypot(t.obj.x - player.x, t.obj.y - player.y) < 40
+      : distToRect(player.x, player.y, t.obj) - PLAYER_R < 28);
+    if (arrived) {
       player.target = null;
-      interact(t.obj);
+      useTarget(t.obj);
     } else {
-      const vx = t.x - player.x, vy = t.y - player.y, d = Math.hypot(vx, vy);
+      const tx = t.obj && t.obj.role ? t.obj.x : t.x, ty = t.obj && t.obj.role ? t.obj.y : t.y;
+      const vx = tx - player.x, vy = ty - player.y, d = Math.hypot(vx, vy);
       if (d < 4) player.target = null;
       else { dx = vx / d; dy = vy / d; }
     }
   }
 
-  // Exhaustion makes you slower
-  const speed = player.speed * (S.energy < 20 ? 0.6 : 1);
+  const run = keys['shift'] ? 1.5 : 1;
+  const speed = player.speed * run * (S.energy < 20 ? 0.6 : 1) * (S.health < 30 ? 0.7 : 1);
   player.moving = false;
   if (dx || dy) {
     const len = Math.hypot(dx, dy);
     let moved = moveEntity(player, dx / len * speed * dt, dy / len * speed * dt);
     if (!moved && player.target) {
-      // Tap-to-walk: try steering around whatever is in the way
       const base = Math.atan2(dy, dx);
       for (const off of [0.8, -0.8, 1.57, -1.57]) {
         const a = base + off;
@@ -236,88 +311,68 @@ function updateWorld(dt) {
       }
     }
     player.moving = moved;
-    if (dx) player.dir = dx > 0 ? 1 : -1;
+    const want = Math.atan2(dx, dy);
+    player.face = lerpAngle(player.face, want, Math.min(1, dt * 12));
     if (!moved && player.target) {
       stuckTime += dt;
       if (stuckTime > 0.6) { player.target = null; stuckTime = 0; }
     } else stuckTime = 0;
   }
+  player.anim += dt * (player.moving ? speed / 20 : 1);
+  player.pose = player.shootT > 0 ? 'aim' : player.moving ? (run > 1 ? 'run' : 'walk') : 'stand';
+  player.shootT = Math.max(0, player.shootT - dt);
 
-  for (const n of npcs) {
-    if (n.wait > 0) { n.wait -= dt; continue; }
-    const vx = n.tx - n.x, vy = n.ty - n.y, d = Math.hypot(vx, vy);
-    if (d < 3) {
-      n.wait = rand(1, 6);
-      const p = randomWalkable(true); n.tx = p.x; n.ty = p.y;
-      continue;
-    }
-    if (!moveEntity(n, vx / d * n.speed * dt, vy / d * n.speed * dt, 10)) {
-      const p = randomWalkable(true); n.tx = p.x; n.ty = p.y;
-    }
-  }
+  updateNPCs(dt);
 
   for (const c of cars) {
-    c.x += (c.lane ? -1 : 1) * c.speed * dt;
-    if (c.x > WORLD.w + 60) c.x = -60;
-    if (c.x < -60) c.x = WORLD.w + 60;
+    c.x += (c.lane < 2 ? -1 : 1) * c.speed * dt;
+    if (c.x > WORLD.w + 200) c.x = -200;
+    if (c.x < -200) c.x = WORLD.w + 200;
   }
 
-  updateThug(dt);
+  updateCombat(dt);
 }
 
-function updateThug(dt) {
-  const k = S.shark;
-  if (!thug && sharkOverdue() && k.nextThug !== null && S.minutes >= k.nextThug) {
-    thug = { x: 900, y: 1110, state: 'chase', t: 0 };
-    k.nextThug = S.minutes + Math.max(60, 240 - 50 * k.overdueDays);
-    toast('🕴️ Someone from Tony\'s crew just walked in... and they are looking for you.', 'danger', 5000);
-  }
-  if (!thug) return;
-  thug.t += dt;
-  if (thug.state === 'chase') {
-    if (!sharkOverdue()) { thug.state = 'leave'; return; }
-    const vx = player.x - thug.x, vy = player.y - thug.y, d = Math.hypot(vx, vy);
-    if (d < 26 || thug.t > 14) { // caught you (or cornered you eventually)
-      thug.state = 'leave';
-      harass();
-      return;
-    }
-    const sp = 175 + 15 * k.overdueDays;
-    if (!moveEntity(thug, vx / d * sp * dt, vy / d * sp * dt, 11)) {
-      // slide around obstacles
-      moveEntity(thug, (Math.random() - 0.5) * sp * dt * 2, (Math.random() - 0.5) * sp * dt * 2, 11);
-    }
-  } else {
-    const vx = 900 - thug.x, vy = 1110 - thug.y, d = Math.hypot(vx, vy);
-    if (d < 10) { thug = null; return; }
-    thug.x += vx / d * 160 * dt; thug.y += vy / d * 160 * dt;
-  }
+function lerpAngle(a, b, t) {
+  let d = ((b - a + Math.PI) % (Math.PI * 2)) - Math.PI;
+  if (d < -Math.PI) d += Math.PI * 2;
+  return a + d * t;
 }
 
 // ---------------------------------------------------------------------------
-// Rendering
+// Rendering (3D when available; simple 2D fallback otherwise)
 // ---------------------------------------------------------------------------
-const camera = { x: 0, y: 0, w: 0, h: 0 };
+const camera2d = { x: 0, y: 0, w: 0, h: 0 };
 let ctx = null;
 
-function resizeCanvas(canvas) {
+function resizeCanvas() {
+  const canvas = document.getElementById('game');
   const dpr = window.devicePixelRatio || 1;
-  camera.w = window.innerWidth; camera.h = window.innerHeight;
-  canvas.width = camera.w * dpr; canvas.height = camera.h * dpr;
-  canvas.style.width = camera.w + 'px'; canvas.style.height = camera.h + 'px';
+  camera2d.w = window.innerWidth; camera2d.h = window.innerHeight;
+  canvas.width = camera2d.w * dpr; canvas.height = camera2d.h * dpr;
+  canvas.style.width = camera2d.w + 'px'; canvas.style.height = camera2d.h + 'px';
   ctx = canvas.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (window.Render3D && Render3D.ready) Render3D.resize();
 }
 
-function roundRect(x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
+function render(time) {
+  if (window.Render3D && Render3D.ready) Render3D.render(time);
+  else render2D(time);
+  drawMinimap();
+  updateZoneName();
+  const prompt = $('#prompt');
+  const near = nearbyTarget();
+  if (near && !blocked()) {
+    prompt.innerHTML = `<b>E</b> ${targetLabel(near)}`;
+    prompt.classList.remove('hidden');
+  } else prompt.classList.add('hidden');
 }
+
+const ROLE_EMOJI = {
+  gambler: '🧑', dealer: '🤵', waitress: '💁‍♀️', guard: '👮', bartender: '🧑‍🍳', clerk: '🧑‍💼', vendor: '🧑‍🍳',
+  homeless: '🧔', pedestrian: '🚶', robber: '🥷', thug: '🕴️', cashierClerk: '🧑‍💼',
+};
 
 function drawEmoji(e, x, y, size) {
   ctx.font = `${size}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
@@ -326,143 +381,92 @@ function drawEmoji(e, x, y, size) {
   ctx.fillText(e, x, y);
 }
 
-function render(time) {
-  camera.x = clamp(player.x - camera.w / 2, 0, Math.max(0, WORLD.w - camera.w));
-  camera.y = clamp(player.y - camera.h / 2, 0, Math.max(0, WORLD.h - camera.h));
-  if (camera.w > WORLD.w) camera.x = (WORLD.w - camera.w) / 2;
-  if (camera.h > WORLD.h) camera.y = (WORLD.h - camera.h) / 2;
-
+function render2D(time) {
+  const cam = camera2d;
+  cam.x = clamp(player.x - cam.w / 2, 0, Math.max(0, WORLD.w - cam.w));
+  cam.y = clamp(player.y - cam.h / 2, 0, Math.max(0, WORLD.h - cam.h));
   ctx.fillStyle = '#0a0508';
-  ctx.fillRect(0, 0, camera.w, camera.h);
+  ctx.fillRect(0, 0, cam.w, cam.h);
   ctx.save();
-  ctx.translate(-Math.round(camera.x), -Math.round(camera.y));
-
-  // Zones
-  for (const z of ZONES) {
-    ctx.fillStyle = z.color;
-    ctx.fillRect(z.x, z.y, z.w, z.h);
-  }
-  // carpet pattern
-  ctx.fillStyle = 'rgba(255,215,0,0.05)';
-  for (let x = 20; x < WORLD.w; x += 40)
-    for (let y = 20; y < CASINO_BOTTOM; y += 40)
-      ctx.fillRect(x, y, 3, 3);
-  for (const z of ZONES) {
-    if (!z.label) continue;
-    ctx.strokeStyle = 'rgba(255,215,0,0.25)';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(z.x, z.y, z.w, z.h);
-    ctx.fillStyle = 'rgba(255,230,150,0.55)';
-    ctx.font = 'bold 14px system-ui, sans-serif';
-    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    ctx.fillText(z.label, z.x + 8, z.y + 6);
-  }
-
-  // Entrance
-  ctx.fillStyle = '#c9a227';
-  ctx.fillRect(850, CASINO_BOTTOM + 4, 100, 6);
-  ctx.fillStyle = '#ffd86b';
-  ctx.font = 'bold 13px system-ui, sans-serif';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('ENTRANCE', 900, CASINO_BOTTOM - 12);
-
-  // Neon casino sign
-  const glow = 0.6 + 0.4 * Math.sin(time / 300);
-  ctx.fillStyle = `rgba(255,60,120,${glow})`;
-  ctx.font = 'bold 22px system-ui, sans-serif';
-  ctx.fillText('★ GOLDEN MIRAGE CASINO ★', 900, CASINO_BOTTOM + 34);
-
-  // Objects
-  const near = nearbyObject();
+  ctx.translate(-Math.round(cam.x), -Math.round(cam.y));
+  for (const z of ZONES) { ctx.fillStyle = z.color; ctx.fillRect(z.x, z.y, z.w, z.h); }
   for (const o of OBJECTS) {
-    if (o.road) {
-      ctx.fillStyle = o.color; ctx.fillRect(o.x, o.y, o.w, o.h);
-      ctx.fillStyle = '#d8c34a';
-      for (let x = 0; x < WORLD.w; x += 60) ctx.fillRect(x, o.y + o.h / 2 - 2, 30, 4);
-      continue;
-    }
-    if (o.wall) { ctx.fillStyle = o.color; ctx.fillRect(o.x, o.y, o.w, o.h); continue; }
     ctx.fillStyle = o.color;
-    roundRect(o.x, o.y, o.w, o.h, 8);
-    ctx.fill();
-    if (o === near) {
-      ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 3; ctx.stroke();
-    } else {
-      ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 2; ctx.stroke();
-    }
-    if (o.type === 'slots') {
-      // blinking lights on slot machines
-      const on = Math.sin(time / 200 + o.x * 0.05 + o.y * 0.03) > 0;
-      ctx.fillStyle = on ? '#ffea00' : '#ff3d7f';
-      ctx.fillRect(o.x + 4, o.y + 3, o.w - 8, 4);
-    }
-    drawEmoji(o.emoji, o.x + o.w / 2, o.y + o.h / 2 + 2, Math.min(28, o.h * 0.6));
-    if (o.label) {
-      ctx.font = 'bold 12px system-ui, sans-serif';
-      ctx.fillStyle = '#fff';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-      ctx.fillText(o.label, o.x + o.w / 2, o.y + o.h + 3);
-    }
+    ctx.fillRect(o.x, o.y, o.w, o.h);
+    if (o.emoji) drawEmoji(o.emoji, o.x + o.w / 2, o.y + o.h / 2, Math.min(28, o.h * 0.6));
   }
-
-  // Cars
-  for (const c of cars) {
-    ctx.save();
-    const cy = 1130 + (c.lane ? 30 : 80);
-    ctx.translate(c.x, cy);
-    if (!c.lane) ctx.scale(-1, 1);
-    drawEmoji(c.emoji, 0, 0, 34);
-    ctx.restore();
-  }
-
-  // NPCs
-  for (const n of npcs) drawEmoji(n.emoji, n.x, n.y, 24);
-
-  // Thug
-  if (thug) {
-    drawEmoji('🕴️', thug.x, thug.y, 28);
-    ctx.fillStyle = '#ff4d4d';
-    ctx.font = 'bold 11px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText("TONY'S CREW", thug.x, thug.y - 24);
-  }
-
-  // Player
-  ctx.fillStyle = 'rgba(0,0,0,0.35)';
-  ctx.beginPath(); ctx.ellipse(player.x, player.y + 12, 12, 5, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = 'rgba(255,215,0,0.35)';
-  ctx.beginPath(); ctx.arc(player.x, player.y, 16, 0, Math.PI * 2); ctx.fill();
-  const bob = player.moving ? Math.sin(time / 80) * 2 : 0;
-  ctx.save();
-  ctx.translate(player.x, player.y + bob);
-  ctx.scale(player.dir, 1);
-  drawEmoji(S.energy < 20 ? '🥱' : S.cash < CONFIG.BROKE_THRESHOLD ? '😰' : '🧑‍💼', 0, 0, 26);
+  for (const n of npcs) drawEmoji(ROLE_EMOJI[n.role] || '🧑', n.x, n.y, 24);
+  drawEmoji('🧑‍💼', player.x, player.y, 26);
   ctx.restore();
-  ctx.fillStyle = '#ffd700';
-  ctx.font = 'bold 11px system-ui, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('YOU', player.x, player.y - 22);
+}
 
-  // Walk target marker
-  if (player.target) {
-    ctx.strokeStyle = 'rgba(255,215,0,0.7)'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(player.target.x, player.target.y, 8, 0, Math.PI * 2); ctx.stroke();
+// GTA-style rotating radar
+function drawMinimap() {
+  const cv = document.getElementById('minimap');
+  if (!cv) return;
+  const size = cv.clientWidth || 160;
+  const dpr = window.devicePixelRatio || 1;
+  if (cv.width !== size * dpr) { cv.width = size * dpr; cv.height = size * dpr; }
+  const m = cv.getContext('2d');
+  m.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const r = size / 2, sc = 0.11;
+  m.clearRect(0, 0, size, size);
+  m.save();
+  m.beginPath(); m.arc(r, r, r - 2, 0, Math.PI * 2); m.clip();
+  m.fillStyle = '#1b2a1b'; m.fillRect(0, 0, size, size);
+  m.translate(r, r);
+  m.rotate(view.yaw);
+  m.scale(sc, sc);
+  m.translate(-player.x, -player.y);
+  for (const z of ZONES) { m.fillStyle = z.color; m.fillRect(z.x, z.y, z.w, z.h); }
+  m.fillStyle = '#3a3a40'; m.fillRect(-2000, 1130, 6000, 110);
+  m.fillStyle = '#6b6b70'; m.fillRect(-2000, 1004, 6000, 126);
+  m.fillStyle = '#26323d'; m.fillRect(-2000, 1240, 6000, 800);
+  for (const o of OBJECTS) {
+    if (o.road) continue;
+    m.fillStyle = o.wall ? '#000' : 'rgba(255,255,255,0.35)';
+    m.fillRect(o.x, o.y, o.w, o.h);
   }
-
-  ctx.restore();
-
-  // Night tint outside hours
-  const hour = (S.minutes % 1440) / 60;
-  const night = hour >= 20 || hour < 6;
-  if (night && player.y > CASINO_BOTTOM) {
-    ctx.fillStyle = 'rgba(10,10,40,0.25)';
-    ctx.fillRect(0, 0, camera.w, camera.h);
+  const icon = (x, y, txt, col) => {
+    m.save(); m.translate(x, y); m.rotate(-view.yaw); m.scale(1 / sc, 1 / sc);
+    m.fillStyle = col; m.beginPath(); m.arc(0, 0, 6, 0, Math.PI * 2); m.fill();
+    m.fillStyle = '#fff'; m.font = 'bold 8px sans-serif'; m.textAlign = 'center'; m.textBaseline = 'middle';
+    m.fillText(txt, 0, 0.5); m.restore();
+  };
+  const find = t => OBJECTS.find(o => o.type === t);
+  [['hotel', 'H', '#3b82f6'], ['buffet', 'F', '#f59e0b'], ['bar', 'B', '#8b5cf6'], ['gunstore', 'G', '#dc2626'],
+    ['pawn', '$', '#16a34a'], ['busstop', '⇢', '#0ea5e9'], ['soup', 'S', '#65a30d']].forEach(([t, l, c]) => {
+    const o = find(t); if (o) icon(o.x + o.w / 2, o.y + o.h / 2, l, c);
+  });
+  for (const n of npcs) {
+    if (!n.hostile) continue;
+    icon(n.x, n.y, '', '#ef4444');
   }
+  m.restore();
+  // player arrow (always pointing where the character faces relative to camera)
+  m.save();
+  m.translate(r, r);
+  m.rotate(Math.PI - player.face + view.yaw);
+  m.fillStyle = '#fff'; m.strokeStyle = '#000'; m.lineWidth = 1.5;
+  m.beginPath(); m.moveTo(0, -8); m.lineTo(6, 7); m.lineTo(0, 3); m.lineTo(-6, 7); m.closePath();
+  m.fill(); m.stroke();
+  m.restore();
+  m.strokeStyle = 'rgba(0,0,0,0.8)'; m.lineWidth = 4;
+  m.beginPath(); m.arc(r, r, r - 2, 0, Math.PI * 2); m.stroke();
+}
 
-  // Interaction prompt
-  const prompt = $('#prompt');
-  if (near && !modalOpen && !phoneOpen && !screenOpen) {
-    prompt.innerHTML = `<b>E</b> / tap: ${interactLabel(near)}`;
-    prompt.classList.remove('hidden');
-  } else prompt.classList.add('hidden');
+// GTA-style area name that fades in when you enter a new part of the map
+let currentZone = null, zoneTimer = null;
+function updateZoneName() {
+  let z = null;
+  for (const zone of ZONES) {
+    if (!zone.label) continue;
+    if (player.x >= zone.x && player.x <= zone.x + zone.w && player.y >= zone.y && player.y <= zone.y + zone.h) z = zone;
+  }
+  const name = z ? z.label : player.y < CASINO_BOTTOM ? 'CASINO FLOOR' : 'THE STRIP';
+  if (name === currentZone) return;
+  currentZone = name;
+  const el = $('#zone');
+  el.textContent = name.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
 }

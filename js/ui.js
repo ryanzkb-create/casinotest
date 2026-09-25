@@ -43,6 +43,7 @@ function closeModal(force = false) {
     if (!force && ok === false) return; // round in progress
   }
   $('#modal').classList.add('hidden');
+  $('#modal-close').classList.remove('hidden');
   modalOpen = false;
   modalOnClose = null;
 }
@@ -101,6 +102,11 @@ function updateHUD(force) {
     bar.style.width = v + '%';
     bar.parentElement.parentElement.classList.toggle('low', v < 25);
   });
+  $('#b-health').style.width = S.health + '%';
+  $('#b-health').parentElement.classList.toggle('low', S.health < 30);
+  $('#b-armor').style.width = S.armor + '%';
+  const heat = sharkOverdue() ? Math.min(5, S.shark.overdueDays + S.tonyAngry) : 0;
+  $('#heat').innerHTML = heat ? '★'.repeat(heat) + '<span>' + '★'.repeat(5 - heat) + '</span>' : '';
   const debtPct = clamp(debt / CONFIG.GAME_OVER_DEBT * 100, 0, 100);
   $('#b-debt').style.width = debtPct + '%';
   $('#debt-meter').classList.toggle('hidden', debt <= 0);

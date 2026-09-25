@@ -8,7 +8,7 @@ const INTERACT_LABELS = {
   bar: 'Order a drink', hotel: 'Get a hotel room', cashier: 'Visit the cashier', atm: 'Use the ATM',
   fountain: 'Drink water', tap: 'Drink from tap', poster: 'Read the poster', noclock: 'Look around',
   streetsleep: 'Sleep on the street', soup: 'Get a free meal', pawn: 'Pawn your stuff',
-  busstop: 'Leave town for good',
+  busstop: 'Leave town for good', gunstore: 'Enter the gun store',
 };
 function interactLabel(o) { return INTERACT_LABELS[o.type] || 'Interact'; }
 
@@ -44,6 +44,7 @@ function interact(o) {
     case 'soup': return soupKitchen();
     case 'pawn': return pawnShop();
     case 'busstop': return busStop();
+    case 'gunstore': return gunStore();
   }
 }
 
@@ -266,17 +267,18 @@ function collapse(cause) {
   closePhone();
   const st = S.stats;
   st.collapses++;
-  const bill = CONFIG.HOSPITAL_BILL;
+  const bill = cause === 'injury' ? CONFIG.TRAUMA_BILL : CONFIG.HOSPITAL_BILL;
   const paid = Math.min(S.cash, bill);
   S.cash -= paid;
   S.medical += bill - paid;
   S.hunger = Math.max(S.hunger, 55);
   S.thirst = Math.max(S.thirst, 60);
   S.energy = Math.max(S.energy, 50);
+  S.health = Math.max(S.health, 60);
   advanceTime(12 * 60, true);
   player.x = 900; player.y = 1104; player.target = null;
-  const why = { hunger: 'from hunger', thirst: 'from dehydration', energy: 'from exhaustion' }[cause];
-  infoDialog('🚑 You collapsed', `<p>You collapsed ${why} and woke up in the hospital 12 hours later.</p>
+  const why = { hunger: 'collapsed from hunger', thirst: 'collapsed from dehydration', energy: 'collapsed from exhaustion', injury: 'were badly hurt' }[cause];
+  infoDialog('🚑 Hospital', `<p>You ${why} and woke up in the hospital 12 hours later.</p>
     <p>Hospital bill: <b>${fmt(bill)}</b>${bill - paid > 0 ? ` (you could only pay ${fmt(paid)}; <b class="lose">${fmt(bill - paid)}</b> became medical debt)` : ''}.</p>
     <p class="muted">Gamblers often skip meals and sleep. Casinos are built to keep you playing for hours.</p>`);
   afterAction();
