@@ -56,13 +56,16 @@ async function loadAll(onProgress) {
     for (const [k] of ASSETS) { got += done[k] || 0; tot += sizes[k] || 400_000; }
     onProgress(Math.min(0.99, got / tot));
   };
+  // hosts that only serve text get base64 copies of the assets (see tools/build_single.py)
+  const suffix = window.__ASSET_SUFFIX || '';
+  const decode = buf => (suffix ? b64ToBuffer(new TextDecoder().decode(buf)) : buf);
   await Promise.all(ASSETS.map(async ([key, path]) => {
     if (window.__ASSETS && window.__ASSETS[path]) { out[key] = b64ToBuffer(window.__ASSETS[path]); done[key] = sizes[key] = out[key].byteLength; report(); return; }
-    const res = await fetch(path);
+    const res = await fetch(path + suffix);
     if (!res.ok) throw new Error('Failed to load ' + path);
     const len = +res.headers.get('content-length') || 0;
     sizes[key] = len || 400_000;
-    if (!res.body || !res.body.getReader) { out[key] = await res.arrayBuffer(); done[key] = sizes[key]; report(); return; }
+    if (!res.body || !res.body.getReader) { out[key] = decode(await res.arrayBuffer()); done[key] = sizes[key]; report(); return; }
     const reader = res.body.getReader(); const chunks = []; let got = 0;
     for (;;) {
       const { done: d, value } = await reader.read();
@@ -70,7 +73,7 @@ async function loadAll(onProgress) {
       chunks.push(value); got += value.length; done[key] = got; report();
     }
     const buf = new Uint8Array(got); let p = 0; for (const c of chunks) { buf.set(c, p); p += c.length; }
-    out[key] = buf.buffer; sizes[key] = got;
+    out[key] = decode(buf.buffer); sizes[key] = got;
     total += got;
   }));
   onProgress(1);

@@ -4,11 +4,12 @@
     python3 tools/build_single.py
         -> dist/golden-mirage.html: one self-contained file (CSS, scripts and all
            3D assets embedded) that you can open by double-clicking.
-    python3 tools/build_single.py --web OUT_DIR [--fragment]
+    python3 tools/build_single.py --web OUT_DIR [--fragment] [--text-assets]
         -> OUT_DIR/golden-mirage.html + OUT_DIR/assets/: a lighter page that
            streams the assets from next to it (for web hosting). --fragment
            drops the <!DOCTYPE>/<html>/<head>/<body> wrappers for hosts that
-           add their own page skeleton.
+           add their own page skeleton; --text-assets writes each asset as
+           base64 text (NAME.b64.txt) for hosts that only serve text files.
 
 The 3D engine (js/r3d/*.js) is bundled with esbuild, which is run through npx
 if it isn't installed. Three.js itself stays on the jsDelivr CDN (import map).
@@ -88,11 +89,18 @@ def main():
         out_dir = Path(sys.argv[2])
         out_dir.mkdir(parents=True, exist_ok=True)
         out = out_dir / "golden-mirage.html"
+        text = "--text-assets" in sys.argv
+        if text:
+            html = html.replace('<script type="importmap">',
+                                "<script>window.__ASSET_SUFFIX='.b64.txt';</script>\n  <script type=\"importmap\">", 1)
         out.write_text(fragment(html) if "--fragment" in sys.argv else html)
         for p in asset_files():
             dest = out_dir / p.relative_to(ROOT)
             dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(p, dest)
+            if text:
+                dest.with_name(dest.name + ".b64.txt").write_text(base64.b64encode(p.read_bytes()).decode())
+            else:
+                shutil.copyfile(p, dest)
     else:
         out = ROOT / "dist" / "golden-mirage.html"
         out.parent.mkdir(exist_ok=True)
