@@ -381,9 +381,9 @@ function cardTable(batch, o, kind) {
   mesh(new THREE.TubeGeometry(curve, 80, 0.07, 10, false), MAT.leatherBlack, g);
   // dealer side: chip tray, card shoe, discard holder, limits sign
   box(w * 0.36, 0.05, 0.28, MAT.darkMetal, g, 0, feltY + 0.03, -d * 0.3);
-  const chipCols = ['#e8e8e8', '#c0121f', '#1f7a3a', '#151515', '#6a2c8a', '#e0a020'];
+  if (!MAT.rackChips) MAT.rackChips = ['#e8e8e8', '#c0121f', '#1f7a3a', '#151515', '#6a2c8a', '#e0a020'].map(c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.5 }));
   for (let i = 0; i < 12; i++) {
-    const c = cyl(0.02, 0.02, 0.26, new THREE.MeshStandardMaterial({ color: chipCols[i % 6], roughness: 0.5 }), g, -w * 0.16 + i * w * 0.029, feltY + 0.075, -d * 0.3);
+    const c = cyl(0.02, 0.02, 0.26, MAT.rackChips[i % 6], g, -w * 0.16 + i * w * 0.029, feltY + 0.075, -d * 0.3);
     c.rotation.x = Math.PI / 2;
   }
   rbox(0.18, 0.1, 0.34, 0.02, MAT.blackGloss, g, w * 0.3, feltY + 0.05, -d * 0.25);   // shoe

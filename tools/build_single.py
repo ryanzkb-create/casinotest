@@ -4,9 +4,11 @@
     python3 tools/build_single.py
         -> dist/golden-mirage.html: one self-contained file (CSS, scripts and all
            3D assets embedded) that you can open by double-clicking.
-    python3 tools/build_single.py --web OUT_DIR
+    python3 tools/build_single.py --web OUT_DIR [--fragment]
         -> OUT_DIR/golden-mirage.html + OUT_DIR/assets/: a lighter page that
-           streams the assets from next to it (for web hosting).
+           streams the assets from next to it (for web hosting). --fragment
+           drops the <!DOCTYPE>/<html>/<head>/<body> wrappers for hosts that
+           add their own page skeleton.
 
 The 3D engine (js/r3d/*.js) is bundled with esbuild, which is run through npx
 if it isn't installed. Three.js itself stays on the jsDelivr CDN (import map).
@@ -72,13 +74,21 @@ def embed_assets(html: str) -> str:
     return html.replace('<script type="importmap">', blob + '\n  <script type="importmap">', 1)
 
 
+def fragment(html: str) -> str:
+    head = re.search(r"<head>(.*?)</head>", html, re.S).group(1)
+    body = re.search(r"<body>(.*?)</body>", html, re.S).group(1)
+    head = re.sub(r'\s*<meta charset="UTF-8">', "", head)
+    head = re.sub(r'\s*<meta name="viewport"[^>]*>', "", head)
+    return head.strip() + "\n" + body.strip() + "\n"
+
+
 def main():
     html = inline((ROOT / "index.html").read_text())
     if len(sys.argv) > 2 and sys.argv[1] == "--web":
         out_dir = Path(sys.argv[2])
         out_dir.mkdir(parents=True, exist_ok=True)
         out = out_dir / "golden-mirage.html"
-        out.write_text(html)
+        out.write_text(fragment(html) if "--fragment" in sys.argv else html)
         for p in asset_files():
             dest = out_dir / p.relative_to(ROOT)
             dest.parent.mkdir(parents=True, exist_ok=True)

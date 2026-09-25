@@ -139,7 +139,7 @@ function leaveGame(force) {
   if (fx) { if (g.type === 'slots') fx.slotClose(); fx.clear(g.o); Render3D.setView(null); }
   $('#game-ui').classList.add('hidden');
   $('#tutorial').classList.add('hidden');
-  document.body.classList.remove('in-game');
+  document.body.classList.remove('in-game', 'gu-focus');
   standPlayer();
   afterAction();
 }
@@ -296,8 +296,10 @@ const ROULETTE = {
       await fx.rouletteBet(g.o, b.key, g.num, amount);
       banner('No more bets', 'info');
       Render3D.setView(fx.wheelView(g.o));
+      document.body.classList.add('gu-focus');   // clear the screen for the wheel close-up
       await fx.rouletteSpin(g.o, n);
       await wait(900);
+      document.body.classList.remove('gu-focus');
       if (gameSession === g) Render3D.setView(fx.seatView(g.o));
     }
     else await wait(2500);
@@ -437,7 +439,7 @@ const BACCARAT = {
     if (!takeStake(g.bet)) return;
     g.busy = true; g.coup = null; renderGameUI();
     const amount = g.bet, fx = T3();
-    if (fx) await fx.placeBet(g.o, amount);
+    if (fx) await fx.placeBet(g.o, amount, fx.baccaratSpot(g.o, side.key));
     const coup = playBaccaratCoup();
     const shown = { p: [], b: [], pt: 0, bt: 0 };
     g.coup = shown;
@@ -526,7 +528,7 @@ const BIGSIX_GAME = {
     const idx = randInt(0, 53);
     const land = order[idx];
     const fx = T3();
-    if (fx) await fx.bigSixSpin(g.o, idx); else await wait(2000);
+    if (fx) { document.body.classList.add('gu-focus'); await fx.bigSixSpin(g.o, idx); document.body.classList.remove('gu-focus'); } else await wait(2000);
     const ret = land === choice.key ? g.bet * (choice.pays + 1) : 0;
     const profit = settle('Big Six Wheel', g.bet, ret, choice.edge);
     if (!gameSession) return;

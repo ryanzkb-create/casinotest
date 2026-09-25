@@ -6,7 +6,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { tableData, ROULETTE_ORDER, W, objFrame } from './build.js';
 import * as TX from './tex.js';
 
-const CARD_W = 0.075, CARD_H = 0.105;       // slightly larger than real cards so they read on screen
+const CARD_W = 0.095, CARD_H = 0.133;       // ~1.5x real cards so they read from the seat
 const CHIP_R = 0.031, CHIP_H = 0.0058;      // ~1.3x real size so stacks read from the seat
 const DENOMS = [100000, 25000, 5000, 1000, 500, 100, 25, 5, 1];
 const ease = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
@@ -35,7 +35,7 @@ export class TableFX {
     const faceMat = v => new THREE.MeshPhysicalMaterial({ map: TX.canvasTex(128, 128, g => { g.fillStyle = '#d4101f'; g.fillRect(0, 0, 128, 128); g.fillStyle = '#fff'; for (const [x, y] of pips[v]) { g.beginPath(); g.arc(x * 128, y * 128, 11, 0, 7); g.fill(); } }), roughness: 0.15, clearcoat: 1, transparent: true, opacity: 0.93 });
     // material order: +x, -x, +y, -y, +z, -z
     this.diceMats = [3, 4, 1, 6, 2, 5].map(faceMat);
-    this.diceGeo = new RoundedBoxGeometry(0.028, 0.028, 0.028, 3, 0.004);
+    this.diceGeo = new RoundedBoxGeometry(0.036, 0.036, 0.036, 3, 0.005);   // ~2x real dice so pips read from the rail
     this.dice = [];
   }
 
@@ -74,14 +74,14 @@ export class TableFX {
     if (o.type === 'slots') {
       const f = objFrame(o); f.updateMatrixWorld(true);
       const big = !!o.big;
-      return { pos: f.localToWorld(new THREE.Vector3(0.36, big ? 1.85 : 1.7, big ? 1.55 : 1.32)), look: f.localToWorld(new THREE.Vector3(0.02, big ? 1.45 : 1.3, 0)), fov: 50 };
+      return { pos: f.localToWorld(new THREE.Vector3(0.22, big ? 1.85 : 1.62, big ? 1.2 : 0.98)), look: f.localToWorld(new THREE.Vector3(0, big ? 1.5 : 1.36, 0.1)), fov: 50 };
     }
     const td = this.td(o);
     if (!td) return null;
-    if (td.kind === 'bigsix') return { pos: this.L(td, 0.3, 1.7, 3.2), look: this.L(td, 0, 2.5, 0), fov: 55 };
-    if (td.kind === 'craps') return { pos: this.L(td, 0.25, 1.75, td.d / 2 + 0.9), look: this.L(td, 0, td.feltY, -0.1), fov: 55 };
+    if (td.kind === 'bigsix') return { pos: this.L(td, 0.55, 2.0, 3.4), look: this.L(td, 0, 2.45, 0), fov: 55 };
+    if (td.kind === 'craps') return { pos: this.L(td, 0.2, 1.62, td.d / 2 + 0.55), look: this.L(td, 0, td.feltY, -0.15), fov: 55 };
     if (td.kind === 'roulette') return { pos: this.L(td, 0.15, 1.65, td.d / 2 + 0.95), look: this.L(td, -0.2, td.feltY, -0.05), fov: 56 };
-    return { pos: this.L(td, 0.05, 1.55, td.d * 0.55 + 0.75), look: this.L(td, 0, td.feltY, -td.d * 0.05), fov: 52 };
+    return { pos: this.L(td, 0.04, 1.5, td.d * 0.5 + 0.42), look: this.L(td, 0, td.feltY, td.d * 0.02), fov: 52 };
   }
 
   // Close-up on the roulette wheel while it spins (like GTA Online)
@@ -120,11 +120,11 @@ export class TableFX {
   cardSpot(td, hand, idx) {
     const y = td.feltY + 0.003 + idx * 0.0008;
     if (td.kind === 'baccarat' || td.kind === 'vip' && td.o.type === 'baccarat_hl') {
-      const baseX = hand === 'player' ? -0.32 : 0.12;
-      return this.L(td, baseX + idx * 0.085, y, td.d * 0.02);
+      const baseX = hand === 'player' ? -0.36 : 0.1;
+      return this.L(td, baseX + idx * 0.105, y, td.d * 0.02);
     }
-    if (hand === 'dealer') return this.L(td, -0.09 + idx * 0.06, y, -td.d * 0.12);
-    return this.L(td, -0.05 + idx * 0.032, y, td.d * 0.24 - idx * 0.02);
+    if (hand === 'dealer') return this.L(td, -0.1 + idx * 0.075, y, -td.d * 0.1);
+    return this.L(td, -0.06 + idx * 0.042, y, td.d * 0.22 - idx * 0.022);
   }
 
   async deal(o, hand, idx, card, faceUp = true) {
@@ -200,6 +200,12 @@ export class TableFX {
     if (td.kind === 'roulette' || td.kind === 'craps' || td.kind === 'bigsix') return null;
     if (td.kind === 'baccarat' || td.o.type === 'baccarat_hl') return this.L(td, 0, td.feltY + 0.001, td.d * 0.3);
     return this.L(td, 0, td.feltY + 0.001, td.d * 0.36);
+  }
+  // Baccarat felt bands (see tex.js feltTex): TIE, BANKER and PLAYER arcs
+  baccaratSpot(o, side) {
+    const td = this.td(o); if (!td) return null;
+    const z = { tie: 0.15, banker: 0.29, player: 0.44 }[side] ?? 0.44;
+    return this.L(td, 0.14, td.feltY + 0.001, td.d * z);
   }
   async placeBet(o, amount, at) {
     const td = this.td(o); if (!td) return;
@@ -301,7 +307,7 @@ export class TableFX {
     const td = this.td(o); if (!td) return;
     this.dice.forEach(d => this.scene.remove(d));
     this.dice = [a, b].map(() => { const m = new THREE.Mesh(this.diceGeo, this.diceMats); m.castShadow = true; this.scene.add(m); return m; });
-    const y = td.feltY + 0.014;
+    const y = td.feltY + 0.018;
     const starts = [this.L(td, -0.06, y + 0.3, td.d / 2 - 0.1), this.L(td, 0.06, y + 0.3, td.d / 2 - 0.1)];
     const wall = [this.L(td, -0.15 + Math.random() * 0.1, y + 0.02, -td.d / 2 + 0.05), this.L(td, 0.1 + Math.random() * 0.1, y + 0.02, -td.d / 2 + 0.05)];
     const ends = [this.L(td, -0.2 + Math.random() * 0.2, y, -td.d * 0.15 + Math.random() * 0.2), this.L(td, 0.05 + Math.random() * 0.25, y, -td.d * 0.1 + Math.random() * 0.2)];

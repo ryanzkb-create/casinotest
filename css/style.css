@@ -307,10 +307,12 @@ body.in-game #action-buttons { bottom: auto; top: calc(150px + env(safe-area-ins
 #game-ui { position: fixed; inset: 0; pointer-events: none; z-index: 30; }
 #game-ui button { pointer-events: auto; }
 #gu-panel {
+  transition: opacity 0.3s;
   position: absolute; left: 16px; top: calc(14px + env(safe-area-inset-top, 0px)); width: min(360px, calc(100vw - 32px));
   background: rgba(0, 0, 0, 0.74); border-radius: 3px; overflow: hidden; pointer-events: auto;
   box-shadow: 0 6px 24px rgba(0,0,0,0.45);
 }
+body.gu-focus #gu-panel { opacity: 0; pointer-events: none; }
 #gu-title {
   font-family: var(--display); font-size: 30px; letter-spacing: 0.5px; line-height: 1; color: #fff;
   padding: 14px 16px 12px; text-transform: uppercase;
