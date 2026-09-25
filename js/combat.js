@@ -116,7 +116,8 @@ function updateCombat(dt) {
           n.cool = rand(0.9, 1.7);
           const acc = (n.role === 'thug' ? 0.45 : 0.38) * (d < 160 ? 1 : 0.7) * (player.moving ? 0.75 : 1);
           const hit = Math.random() < acc;
-          fx.push({ x1: n.x, y1: n.y, x2: player.x + (hit ? 0 : rand(-40, 40)), y2: player.y + (hit ? 0 : rand(-40, 40)), t: 0.07, enemy: true });
+          fx.push(hit ? { from: n, to: player, x1: n.x, y1: n.y, x2: player.x, y2: player.y, t: 0.07, enemy: true }
+            : { from: n, x1: n.x, y1: n.y, x2: player.x + rand(-40, 40), y2: player.y + rand(-40, 40), t: 0.07, enemy: true });
           sfx('far');
           if (hit) damagePlayer(n.role === 'thug' ? randInt(12, 20) : randInt(9, 16));
         }
@@ -154,6 +155,7 @@ function bestWeapon() {
 }
 
 function confront(n) {
+  leaveGame(true);
   if (blocked()) { closeModal(true); closePhone(); }
   clearMovement();
   n.face = Math.atan2(player.x - n.x, player.y - n.y);
@@ -234,7 +236,7 @@ function startFight(list, kind, loot = 0) {
   fightCtx = { kind, loot, inside: !isOutside() };
   list.forEach(n => { n.state = 'fight'; n.hostile = true; n.talk = false; n.cool = rand(0.7, 1.4); n.strafe = Math.random() < 0.5 ? 1 : -1; });
   S.equipped = bestWeapon();
-  toast('⚠️ SHOOTOUT! Press <b>F</b> or tap an enemy to shoot. <b>Q</b> switches weapon. Keep moving!', 'danger', 6000);
+  toast('⚠️ SHOOTOUT! Hold <b>right mouse</b> (or AIM) to aim, <b>left click</b>, <b>F</b> or FIRE to shoot. <b>Q</b> switches weapon. Keep moving!', 'danger', 6000);
   updateWeaponHUD();
 }
 
@@ -285,9 +287,13 @@ function fireWeapon(target) {
   if (fireCool > 0) return;
   if (S.ammo[S.equipped] <= 0) { toast(`Out of ${w.ammoName}!`, 'danger'); return; }
   const foes = hostiles();
+  const r3 = window.Render3D && Render3D.ready;
+  let aimed = false;
+  if ((!target || !target.hostile) && r3) { target = Render3D.aimPick(view.aiming ? 0.1 : 0.22); aimed = !!target && view.aiming; }
   if (!target || !target.hostile) {
+    // soft lock-on to the nearest threat when not aiming precisely
     target = null;
-    let bd = 480;
+    let bd = view.aiming && r3 ? 0 : 480;
     foes.forEach(f => { const d = Math.hypot(f.x - player.x, f.y - player.y); if (d < bd) { bd = d; target = f; } });
   }
   S.ammo[S.equipped]--;
@@ -296,16 +302,20 @@ function fireWeapon(target) {
   sfx(S.equipped);
   updateWeaponHUD();
   if (!target) {
-    const fx2 = player.x + Math.sin(player.face) * 300, fy2 = player.y + Math.cos(player.face) * 300;
-    fx.push({ x1: player.x, y1: player.y, x2: fx2, y2: fy2, t: 0.07 });
-    recklessDischarge();
+    const dir = view.aiming || r3 ? view.yaw + Math.PI : player.face;
+    player.face = dir;
+    const fx2 = player.x + Math.sin(dir) * 300, fy2 = player.y + Math.cos(dir) * 300;
+    fx.push({ from: player, x1: player.x, y1: player.y, x2: fx2, y2: fy2, y3d: Math.max(0.05, 1.4 - Math.tan(view.pitch) * 15), t: 0.07 });
+    if (!foes.length) recklessDischarge();
     return;
   }
   player.face = Math.atan2(target.x - player.x, target.y - player.y);
   const d = Math.hypot(target.x - player.x, target.y - player.y);
-  const chance = S.equipped === 'shotgun' ? (d < 150 ? 0.92 : d < 300 ? 0.5 : 0.15) : clamp(0.85 - d / 900, 0.25, 0.85);
+  let chance = S.equipped === 'shotgun' ? (d < 150 ? 0.92 : d < 300 ? 0.5 : 0.15) : clamp(0.85 - d / 900, 0.25, 0.85);
+  if (aimed) chance = Math.min(0.97, chance + 0.12);
   const hit = Math.random() < chance;
-  fx.push({ x1: player.x, y1: player.y, x2: target.x + (hit ? 0 : rand(-35, 35)), y2: target.y + (hit ? 0 : rand(-35, 35)), t: 0.07 });
+  fx.push(hit ? { from: player, to: target, x1: player.x, y1: player.y, x2: target.x, y2: target.y, t: 0.07 }
+    : { from: player, x1: player.x, y1: player.y, x2: target.x + rand(-35, 35), y2: target.y + rand(-35, 35), t: 0.07 });
   if (!hit) return;
   target.hp -= w.dmg * rand(0.85, 1.15);
   target.hitT = 0.2;

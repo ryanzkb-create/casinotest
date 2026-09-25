@@ -1,97 +1,22 @@
 'use strict';
 
 // ---------------------------------------------------------------------------
-// Map layout (in "map units"; the 3D renderer converts 20 units = 1 metre)
+// Player movement, GTA-style controls, collision helpers, radar.
+// The floor plan lives in layout.js; the 3D renderer in js/r3d/.
 // ---------------------------------------------------------------------------
-const WORLD = { w: 1800, h: 1240 };
-const CASINO_BOTTOM = 990;
-const DOOR = { x1: 850, x2: 950 };
-
-const ZONES = [
-  { x: 0, y: 0, w: 1800, h: 1004, color: '#2b0d16', floor: 'carpet' },
-  { x: 30, y: 30, w: 560, h: 560, color: '#3a1450', label: 'SLOT MACHINES', floor: 'carpetPurple' },
-  { x: 620, y: 30, w: 440, h: 260, color: '#4a3a0a', label: 'HIGH LIMIT ROOM', floor: 'marbleGold' },
-  { x: 620, y: 330, w: 740, h: 560, color: '#0f3a24', label: 'TABLE GAMES', floor: 'carpetGreen' },
-  { x: 1400, y: 30, w: 370, h: 380, color: '#4a2a10', label: 'FOOD COURT', floor: 'tiles' },
-  { x: 1400, y: 440, w: 370, h: 220, color: '#102a4a', label: 'THE LUCKY BAR', floor: 'wood' },
-  { x: 1400, y: 690, w: 370, h: 290, color: '#333642', label: 'HOTEL LOBBY', floor: 'marble' },
-  { x: 30, y: 620, w: 560, h: 360, color: '#2a2034', label: 'CASHIER & LOUNGE', floor: 'carpetBlue' },
-  { x: 0, y: 1004, w: 1800, h: 126, color: '#5b5b60', label: 'THE STRIP', floor: 'sidewalk' },
-];
-
-const OBJECTS = [];
-function addObj(o) {
-  if (o.solid === undefined) o.solid = true;
-  OBJECTS.push(o);
-  return o;
-}
-
-function buildWorld() {
-  OBJECTS.length = 0;
-  for (let r = 0; r < 5; r++)
-    for (let c = 0; c < 6; c++)
-      addObj({ x: 64 + c * 86, y: 78 + r * 104, w: 44, h: 46, type: 'slots', emoji: '🎰', color: '#6b2a8a' });
-
-  addObj({ x: 660, y: 100, w: 170, h: 80, type: 'blackjack_hl', emoji: '🃏', label: 'VIP Blackjack', color: '#1d6b3a' });
-  addObj({ x: 860, y: 100, w: 170, h: 80, type: 'baccarat_hl', emoji: '🀄', label: 'VIP Baccarat', color: '#1d6b3a' });
-
-  addObj({ x: 660, y: 390, w: 170, h: 90, type: 'roulette', emoji: '🎯', label: 'Roulette', color: '#1d6b3a' });
-  addObj({ x: 890, y: 390, w: 170, h: 90, type: 'blackjack', emoji: '🃏', label: 'Blackjack', color: '#1d6b3a' });
-  addObj({ x: 1120, y: 390, w: 170, h: 90, type: 'blackjack', emoji: '🃏', label: 'Blackjack', color: '#1d6b3a' });
-  addObj({ x: 660, y: 600, w: 200, h: 100, type: 'craps', emoji: '🎲', label: 'Craps', color: '#1d6b3a' });
-  addObj({ x: 920, y: 600, w: 170, h: 90, type: 'baccarat', emoji: '🀄', label: 'Baccarat', color: '#1d6b3a' });
-  addObj({ x: 1150, y: 590, w: 120, h: 110, type: 'bigsix', emoji: '🎡', label: 'Big Six Wheel', color: '#7a2a1a' });
-
-  addObj({ x: 1430, y: 90, w: 100, h: 55, type: 'hotdog', emoji: '🌭', label: 'Hot Dogs', color: '#8a5a1a' });
-  addObj({ x: 1570, y: 90, w: 170, h: 55, type: 'buffet', emoji: '🍱', label: 'Buffet', color: '#8a5a1a' });
-  addObj({ x: 1430, y: 260, w: 150, h: 60, type: 'steak', emoji: '🥩', label: 'Steakhouse', color: '#6a2a1a' });
-  addObj({ x: 1640, y: 250, w: 60, h: 60, emoji: '🪑', color: '#5a3a20', decor: 'diningTable' });
-
-  addObj({ x: 1430, y: 520, w: 310, h: 50, type: 'bar', emoji: '🍸', label: 'Bar', color: '#2a4a7a' });
-
-  addObj({ x: 1440, y: 780, w: 200, h: 50, type: 'hotel', emoji: '🛎️', label: 'Front Desk', color: '#555a70' });
-  addObj({ x: 1680, y: 720, w: 60, h: 70, emoji: '🛗', color: '#444', decor: 'elevator' });
-
-  addObj({ x: 60, y: 670, w: 200, h: 60, type: 'cashier', emoji: '💰', label: 'Cashier Cage', color: '#6a5a2a' });
-  addObj({ x: 300, y: 670, w: 50, h: 60, type: 'atm', emoji: '🏧', label: 'ATM', color: '#3a4a5a' });
-  addObj({ x: 400, y: 680, w: 40, h: 40, type: 'fountain', emoji: '🚰', label: 'Water', color: '#2a5a7a' });
-  addObj({ x: 480, y: 660, w: 80, h: 50, type: 'poster', emoji: '📋', label: 'Help Poster', color: '#6a6a6a' });
-  addObj({ x: 70, y: 860, w: 130, h: 44, type: 'noclock', emoji: '🪟', label: 'Where are the clocks?', color: '#3a3a4a' });
-  addObj({ x: 300, y: 850, w: 160, h: 60, emoji: '🛋️', color: '#4a2a3a', decor: 'sofa' });
-
-  // Casino front wall with the entrance
-  addObj({ x: 0, y: CASINO_BOTTOM, w: DOOR.x1, h: 14, color: '#111', wall: true });
-  addObj({ x: DOOR.x2, y: CASINO_BOTTOM, w: 1800 - DOOR.x2, h: 14, color: '#111', wall: true });
-
-  // Street
-  addObj({ x: 90, y: 1036, w: 100, h: 40, type: 'streetsleep', emoji: '📦', label: 'Cardboard spot', color: '#7a6a4a' });
-  addObj({ x: 330, y: 1020, w: 200, h: 56, type: 'soup', emoji: '🍲', label: 'Soup Kitchen', color: '#4a6a4a' });
-  addObj({ x: 620, y: 1020, w: 160, h: 56, type: 'pawn', emoji: '💍', label: 'Pawn Shop', color: '#6a4a6a' });
-  addObj({ x: 1120, y: 1036, w: 36, h: 36, type: 'tap', emoji: '🚰', label: 'Public tap', color: '#2a5a7a' });
-  addObj({ x: 1250, y: 1020, w: 180, h: 56, type: 'gunstore', emoji: '🔫', label: 'Gun Store', color: '#5a4a2a' });
-  addObj({ x: 1580, y: 1024, w: 140, h: 52, type: 'busstop', emoji: '🚏', label: 'Bus out of town', color: '#2a6a5a' });
-  addObj({ x: 0, y: 1130, w: 1800, h: 110, color: '#1e1e22', road: true });
-}
-
-// ---------------------------------------------------------------------------
-// Entities
-// ---------------------------------------------------------------------------
-const PLAYER_R = 11;
-const player = { x: 900, y: 1104, speed: 160, face: Math.PI, moving: false, target: null, anim: 0, pose: 'stand', shootT: 0 };
+const PLAYER_R = 7;                       // ~35 cm body radius
+const SPEED = { walk: 1.6 * 20, jog: 3.8 * 20, sprint: 6.4 * 20 };  // map units / s
+const player = { x: 900, y: 1104, face: Math.PI, moving: false, pose: 'stand', anim: 0, shootT: 0, seated: false, seatY: 0 };
 let npcs = [];
 let cars = [];
-const view = { yaw: 0, zoom: 1 }; // camera yaw (0 = looking north into the casino)
+const view = { yaw: 0, pitch: 0.12, zoom: 1, aiming: false, walk: false };
 
 function resetEntities() {
-  player.x = 900; player.y = 1104; player.target = null; player.face = Math.PI; player.pose = 'stand';
-  view.yaw = 0;
+  player.x = 900; player.y = 1104; player.face = Math.PI; player.pose = 'stand'; player.seated = false; player.seatY = 0;
+  view.yaw = 0; view.pitch = 0.12;
   spawnNPCs();
   cars = [];
-  const CAR_COLORS = ['#c0392b', '#1f3a93', '#f1c40f', '#ecf0f1', '#111111', '#7f8c8d', '#16a085', '#8e44ad'];
-  for (let i = 0; i < 7; i++) cars.push({
-    x: rand(0, WORLD.w), lane: i % 4, speed: rand(160, 300),
-    color: i === 0 ? '#f5c518' : pick(CAR_COLORS), kind: i === 0 ? 'taxi' : pick(['sedan', 'sedan', 'suv', 'sport']),
-  });
+  for (let i = 0; i < 9; i++) cars.push({ x: rand(-200, WORLD.w + 200), lane: i % 4, speed: rand(170, 300) });
   if (typeof resetCombat === 'function') resetCombat();
 }
 
@@ -105,10 +30,14 @@ function hits(x, y, r = PLAYER_R) {
 }
 
 function randomWalkable(area) {
-  for (let i = 0; i < 200; i++) {
-    const x = rand(40, WORLD.w - 40);
-    const y = area === 'street' ? rand(1082, 1118) : rand(40, CASINO_BOTTOM - 30);
-    if (!hits(x, y, 14)) return { x, y };
+  for (let i = 0; i < 300; i++) {
+    let x, y;
+    if (area === 'street') { x = rand(40, WORLD.w - 40); y = rand(1082, 1118); }
+    else if (area === 'walkway') {
+      if (Math.random() < 0.5) { x = rand(M(42), M(48)); y = rand(40, CASINO_BOTTOM - 40); }
+      else { x = rand(40, WORLD.w - 40); y = rand(M(36.3), M(39.2)); }
+    } else { x = rand(40, WORLD.w - 40); y = rand(40, CASINO_BOTTOM - 30); }
+    if (!hits(x, y, 12)) return { x, y };
   }
   return { x: 900, y: 930 };
 }
@@ -127,216 +56,241 @@ function distToRect(x, y, o) {
 
 function isOutside(e = player) { return e.y > CASINO_BOTTOM; }
 
-// Nearest thing you can use: an object or a person to talk to.
+// Nearest thing you can use: an object or a person to talk to
 function nearbyTarget() {
-  let best = null, bd = 30;
+  if (player.seated) return null;
+  let best = null, bd = 26;
   for (const o of OBJECTS) {
     if (!o.type) continue;
     const d = distToRect(player.x, player.y, o) - PLAYER_R;
-    if (d < bd) { bd = d; best = o; }
+    if (d < bd) {
+      // must roughly face it
+      const cx = clamp(player.x, o.x, o.x + o.w), cy = clamp(player.y, o.y, o.y + o.h);
+      const a = Math.atan2(cx - player.x, cy - player.y);
+      if (d > 6 && Math.abs(lerpAngle(0, a - player.face, 1)) > 1.6) continue;
+      bd = d; best = o;
+    }
   }
   for (const n of npcs) {
     if (!n.talk || n.pose === 'down') continue;
-    const d = Math.hypot(n.x - player.x, n.y - player.y) - PLAYER_R - 12;
+    const d = Math.hypot(n.x - player.x, n.y - player.y) - PLAYER_R - 10;
     if (d < bd - 4) { bd = d; best = n; }
   }
   return best;
 }
 const nearbyObject = nearbyTarget;
 
-function targetLabel(t) {
-  if (t.role) return `Talk to ${t.name}`;
-  return interactLabel(t);
-}
-
-function useTarget(t) {
-  if (t.role) talkTo(t);
-  else interact(t);
-}
+function targetLabel(t) { return t.role ? `Talk to ${t.name}` : interactLabel(t); }
+function useTarget(t) { if (t.role) talkTo(t); else interact(t); }
 
 // ---------------------------------------------------------------------------
-// Input
+// Input: keyboard + mouse look (pointer lock) + touch joystick
 // ---------------------------------------------------------------------------
 const keys = {};
+const touch = { mx: 0, my: 0, active: false, sprint: false };
 function clearMovement() {
   for (const k in keys) keys[k] = false;
-  player.target = null;
+  touch.mx = touch.my = 0;
+  view.aiming = false;
 }
-
-function blocked() { return modalOpen || phoneOpen || screenOpen || S.ended; }
+function blocked() { return modalOpen || phoneOpen || screenOpen || S.ended || (typeof gameSession !== 'undefined' && gameSession); }
 
 function setupInput() {
   window.addEventListener('keydown', e => {
     const k = e.key.toLowerCase();
     if (screenOpen) return;
+    if (typeof gameSession !== 'undefined' && gameSession) { gameKey(k, e); return; }
     if (k === 'escape') {
       if (phoneOpen) closePhone(); else if (modalOpen) closeModal();
       return;
     }
     if (modalOpen) return;
-    if (k === 'p') { togglePhone(); return; }
+    if (k === 'p' || k === 'arrowup' && e.ctrlKey) { togglePhone(); return; }
     if (phoneOpen) return;
     keys[k] = true;
-    if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
-    if (k === 'e' || k === ' ' || k === 'enter') {
-      const t = nearbyTarget();
-      if (t) useTarget(t);
-    }
+    if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ', 'tab'].includes(k)) e.preventDefault();
+    if (k === 'e' || k === 'enter') { const t = nearbyTarget(); if (t) useTarget(t); }
     if (k === 'f') fireWeapon();
     if (k === 'q') cycleWeapon();
-    if (k === 'c') view.zoom = view.zoom > 1.2 ? 0.7 : view.zoom < 0.9 ? 1 : 1.6;
+    if (k === 'x') { view.walk = !view.walk; toast(view.walk ? 'Walking' : 'Jogging', 'info', 1200); }
+    if (k === 'v') view.zoom = view.zoom > 1.2 ? 0.8 : view.zoom < 0.9 ? 1 : 1.35;
   });
   window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
   window.addEventListener('blur', clearMovement);
 
-  // Pointer: drag to turn the camera, tap to walk/use
-  const surfaces = [document.getElementById('game'), document.getElementById('game3d')];
+  const surface = document.getElementById('game3d');
+  const surfaces = [surface, document.getElementById('game')];
+  const sens = 0.0024;
+  const locked = () => document.pointerLockElement === surface;
   let drag = null;
-  const pinch = new Map();
   surfaces.forEach(cv => {
     if (!cv) return;
-    cv.addEventListener('pointerdown', e => {
-      if (blocked()) return;
-      pinch.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: false, id: e.pointerId };
-      cv.setPointerCapture(e.pointerId);
-    });
-    cv.addEventListener('pointermove', e => {
-      if (!drag || blocked()) return;
-      if (pinch.size === 2 && pinch.has(e.pointerId)) {
-        const [a, b] = [...pinch.values()];
-        const before = Math.hypot(a.x - b.x, a.y - b.y);
-        pinch.set(e.pointerId, { x: e.clientX, y: e.clientY });
-        const [c, d] = [...pinch.values()];
-        const after = Math.hypot(c.x - d.x, c.y - d.y);
-        view.zoom = clamp(view.zoom * before / Math.max(1, after), 0.5, 2.2);
-        drag.moved = true;
-        return;
+    cv.addEventListener('contextmenu', e => e.preventDefault());
+    cv.addEventListener('mousedown', e => {
+      if (blocked() || e.pointerType === 'touch') return;
+      if (e.button === 2) { view.aiming = true; return; }
+      if (e.button === 0) {
+        if (locked()) { if (S.equipped) fireWeapon(); return; }
+        try { const p = cv.requestPointerLock && cv.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (err) { /* optional */ }
+        drag = { x: e.clientX, y: e.clientY };
       }
-      if (e.pointerId !== drag.id) return;
-      if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 8) drag.moved = true;
-      if (drag.moved) view.yaw -= (e.clientX - drag.x) * 0.006;
-      drag.x = e.clientX; drag.y = e.clientY;
     });
-    const up = e => {
-      pinch.delete(e.pointerId);
-      if (!drag || e.pointerId !== drag.id) return;
-      const wasTap = !drag.moved;
-      drag = null;
-      if (wasTap && !blocked()) tapAt(e.clientX, e.clientY);
-    };
-    cv.addEventListener('pointerup', up);
-    cv.addEventListener('pointercancel', e => { pinch.delete(e.pointerId); drag = null; });
-    cv.addEventListener('wheel', e => {
+    window.addEventListener('mouseup', e => { if (e.button === 2) view.aiming = false; if (e.button === 0) drag = null; });
+    cv.addEventListener('mousemove', e => {
+      if (blocked()) return;
+      if (locked()) { view.yaw -= e.movementX * sens; view.pitch += e.movementY * sens; }
+      else if (drag) { view.yaw -= (e.clientX - drag.x) * sens * 1.4; view.pitch += (e.clientY - drag.y) * sens * 1.4; drag.x = e.clientX; drag.y = e.clientY; }
+      view.pitch = clamp(view.pitch, -0.55, 1.15);
+    });
+    cv.addEventListener('wheel', e => { e.preventDefault(); if (!blocked()) view.zoom = clamp(view.zoom * (e.deltaY > 0 ? 1.1 : 0.9), 0.6, 1.8); }, { passive: false });
+  });
+  document.addEventListener('pointerlockchange', () => { document.body.classList.toggle('locked', locked()); });
+
+  // Touch: left half = movement stick, right half = look
+  const stick = $('#stick'), knob = $('#stick-knob');
+  const touches = new Map();
+  const onStart = e => {
+    if (blocked()) return;
+    for (const t of e.changedTouches) {
+      if (t.target.closest && t.target.closest('button, #prompt, .modal-box, #phone')) continue;
+      const left = t.clientX < innerWidth * 0.45;
+      touches.set(t.identifier, { kind: left ? 'move' : 'look', x0: t.clientX, y0: t.clientY, x: t.clientX, y: t.clientY });
+      if (left) { stick.style.left = (t.clientX - 60) + 'px'; stick.style.top = (t.clientY - 60) + 'px'; stick.classList.add('on'); }
       e.preventDefault();
-      view.zoom = clamp(view.zoom * (e.deltaY > 0 ? 1.1 : 0.9), 0.5, 2.2);
-    }, { passive: false });
+    }
+  };
+  const onMove = e => {
+    for (const t of e.changedTouches) {
+      const s = touches.get(t.identifier);
+      if (!s) continue;
+      if (s.kind === 'move') {
+        let dx = t.clientX - s.x0, dy = t.clientY - s.y0;
+        const len = Math.hypot(dx, dy), max = 50;
+        if (len > max) { dx *= max / len; dy *= max / len; }
+        knob.style.transform = `translate(${dx}px, ${dy}px)`;
+        touch.mx = dx / max; touch.my = dy / max; touch.active = true;
+      } else {
+        view.yaw -= (t.clientX - s.x) * 0.006; view.pitch = clamp(view.pitch + (t.clientY - s.y) * 0.005, -0.55, 1.15);
+        s.x = t.clientX; s.y = t.clientY;
+      }
+      e.preventDefault();
+    }
+  };
+  const onEnd = e => {
+    for (const t of e.changedTouches) {
+      const s = touches.get(t.identifier);
+      if (!s) continue;
+      if (s.kind === 'move') { touch.mx = touch.my = 0; touch.active = false; knob.style.transform = ''; stick.classList.remove('on'); }
+      touches.delete(t.identifier);
+    }
+  };
+  surfaces.forEach(cv => {
+    if (!cv) return;
+    cv.addEventListener('touchstart', onStart, { passive: false });
+    cv.addEventListener('touchmove', onMove, { passive: false });
+    cv.addEventListener('touchend', onEnd); cv.addEventListener('touchcancel', onEnd);
   });
 
-  $('#prompt').addEventListener('click', () => {
-    const t = nearbyTarget();
-    if (t && !blocked()) useTarget(t);
-  });
-}
-
-function tapAt(cx, cy) {
-  let hit;
-  if (window.Render3D && Render3D.ready) hit = Render3D.pick(cx, cy);
-  else {
-    const wx = cx + camera2d.x, wy = cy + camera2d.y;
-    hit = { x: wx, y: wy, target: OBJECTS.find(o => o.type && wx >= o.x && wx <= o.x + o.w && wy >= o.y && wy <= o.y + o.h) || null };
-  }
-  if (!hit) return;
-  const t = hit.target;
-  if (t && t.hostile) { fireWeapon(t); return; }
-  if (t) {
-    const near = t.role ? Math.hypot(t.x - player.x, t.y - player.y) < 45 : distToRect(player.x, player.y, t) - PLAYER_R < 30;
-    if (near) { useTarget(t); return; }
-    if (t.role) player.target = { x: t.x, y: t.y, obj: t };
-    else player.target = {
-      x: clamp(player.x, t.x - 16, t.x + t.w + 16),
-      y: clamp(player.y, t.y - 16, t.y + t.h + 16), obj: t,
-    };
-  } else player.target = { x: hit.x, y: hit.y, obj: null };
+  $('#prompt').addEventListener('click', () => { const t = nearbyTarget(); if (t && !blocked()) useTarget(t); });
+  const aimBtn = $('#aimBtn');
+  if (aimBtn) aimBtn.addEventListener('click', () => { view.aiming = !view.aiming; aimBtn.classList.toggle('on', view.aiming); });
+  const sprintBtn = $('#sprintBtn');
+  if (sprintBtn) sprintBtn.addEventListener('click', () => { touch.sprint = !touch.sprint; sprintBtn.classList.toggle('on', touch.sprint); });
 }
 
 // ---------------------------------------------------------------------------
 // Update
 // ---------------------------------------------------------------------------
-let stuckTime = 0;
 function updateWorld(dt) {
+  if (player.seated) {
+    player.pose = 'sit';
+    updateNPCs(dt);
+    updateTraffic(dt);
+    updateCombat(dt);
+    return;
+  }
   let ix = 0, iy = 0;
   if (keys['w'] || keys['arrowup']) iy -= 1;
   if (keys['s'] || keys['arrowdown']) iy += 1;
   if (keys['a'] || keys['arrowleft']) ix -= 1;
   if (keys['d'] || keys['arrowright']) ix += 1;
+  if (touch.active) { ix += touch.mx; iy += touch.my; }
+  const mag = Math.min(1, Math.hypot(ix, iy));
 
   let dx = 0, dy = 0;
-  if (ix || iy) {
-    player.target = null;
-    // camera-relative: forward = away from camera
-    const fx = -Math.sin(view.yaw), fy = -Math.cos(view.yaw);
-    const rx = Math.cos(view.yaw), ry = -Math.sin(view.yaw);
+  if (mag > 0.05) {
+    const fx = -Math.sin(view.yaw), fy = -Math.cos(view.yaw);   // camera forward (map)
+    const rx = Math.cos(view.yaw), ry = -Math.sin(view.yaw);     // camera right
     dx = rx * ix + fx * -iy;
     dy = ry * ix + fy * -iy;
+    const l = Math.hypot(dx, dy); dx /= l; dy /= l;
   }
-
-  if (player.target) {
-    const t = player.target;
-    const arrived = t.obj && (t.obj.role
-      ? Math.hypot(t.obj.x - player.x, t.obj.y - player.y) < 40
-      : distToRect(player.x, player.y, t.obj) - PLAYER_R < 28);
-    if (arrived) {
-      player.target = null;
-      useTarget(t.obj);
-    } else {
-      const tx = t.obj && t.obj.role ? t.obj.x : t.x, ty = t.obj && t.obj.role ? t.obj.y : t.y;
-      const vx = tx - player.x, vy = ty - player.y, d = Math.hypot(vx, vy);
-      if (d < 4) player.target = null;
-      else { dx = vx / d; dy = vy / d; }
-    }
-  }
-
-  const run = keys['shift'] ? 1.5 : 1;
-  const speed = player.speed * run * (S.energy < 20 ? 0.6 : 1) * (S.health < 30 ? 0.7 : 1);
+  const sprint = (keys['shift'] || touch.sprint) && !view.aiming && S.energy > 5;
+  let speed = view.aiming ? SPEED.walk : sprint ? SPEED.sprint : view.walk || (touch.active && mag < 0.55) ? SPEED.walk : SPEED.jog;
+  speed *= (S.energy < 20 ? 0.7 : 1) * (S.health < 30 ? 0.7 : 1);
   player.moving = false;
   if (dx || dy) {
-    const len = Math.hypot(dx, dy);
-    let moved = moveEntity(player, dx / len * speed * dt, dy / len * speed * dt);
-    if (!moved && player.target) {
-      const base = Math.atan2(dy, dx);
-      for (const off of [0.8, -0.8, 1.57, -1.57]) {
-        const a = base + off;
-        if (moveEntity(player, Math.cos(a) * speed * dt, Math.sin(a) * speed * dt)) { moved = true; break; }
-      }
-    }
+    const moved = moveEntity(player, dx * speed * dt, dy * speed * dt);
     player.moving = moved;
-    const want = Math.atan2(dx, dy);
-    player.face = lerpAngle(player.face, want, Math.min(1, dt * 12));
-    if (!moved && player.target) {
-      stuckTime += dt;
-      if (stuckTime > 0.6) { player.target = null; stuckTime = 0; }
-    } else stuckTime = 0;
+    if (!view.aiming) player.face = lerpAngle(player.face, Math.atan2(dx, dy), Math.min(1, dt * 10));
+    if (sprint && moved) S.energy = Math.max(0, S.energy - dt * 0.15);
   }
-  player.anim += dt * (player.moving ? speed / 20 : 1);
-  player.pose = player.shootT > 0 ? 'aim' : player.moving ? (run > 1 ? 'run' : 'walk') : 'stand';
+  if (view.aiming) {
+    player.face = view.yaw + Math.PI;
+    player.aimPitch = -view.pitch * 0.8;
+  }
+  player.pose = (view.aiming && S.equipped) || player.shootT > 0 ? 'aim' : !player.moving ? 'stand' : sprint ? 'sprint' : speed <= SPEED.walk ? 'walk' : 'run';
   player.shootT = Math.max(0, player.shootT - dt);
+  const ch = $('#crosshair');
+  if (ch) {
+    const show = view.aiming && S.equipped;
+    ch.classList.toggle('hidden', !show);
+    ch.classList.toggle('target', !!(show && window.Render3D && Render3D.ready && Render3D.aimPick(0.1)));
+  }
 
   updateNPCs(dt);
-
-  for (const c of cars) {
-    c.x += (c.lane < 2 ? -1 : 1) * c.speed * dt;
-    if (c.x > WORLD.w + 200) c.x = -200;
-    if (c.x < -200) c.x = WORLD.w + 200;
-  }
-
+  updateTraffic(dt);
   updateCombat(dt);
 }
 
+function updateTraffic(dt) {
+  for (const c of cars) {
+    c.x += (c.lane < 2 ? -1 : 1) * c.speed * dt;
+    if (c.x > WORLD.w + 600) c.x = -600;
+    if (c.x < -600) c.x = WORLD.w + 600;
+  }
+}
+
 function lerpAngle(a, b, t) {
-  let d = ((b - a + Math.PI) % (Math.PI * 2)) - Math.PI;
-  if (d < -Math.PI) d += Math.PI * 2;
+  let d = ((b - a + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
   return a + d * t;
+}
+
+// Sit the player down at a machine or table (used by the casino games)
+function seatPlayer(o) {
+  const seat = o.type === 'craps' || o.type === 'bigsix' ? seatOf(o, 0.5) : o.type === 'slots' ? slotSeat(o) : tableSeats(o)[Math.floor(tableSeats(o).length / 2)] || seatOf(o);
+  player.returnTo = { x: player.x, y: player.y };
+  // someone already sitting there moves to a free seat (or gets up and wanders off)
+  const taken = s => npcs.find(n => n.role === 'gambler' && Math.hypot(n.x - s.x, n.y - s.y) < 8);
+  const occ = taken(seat);
+  if (occ) {
+    const free = (o.type === 'slots' || o.type === 'craps' || o.type === 'bigsix' ? [] : tableSeats(o)).find(s => !taken(s));
+    if (free) { occ.x = free.x; occ.y = free.y; occ.face = free.face; }
+    else { const p = randomWalkable('walkway'); Object.assign(occ, { x: p.x, y: p.y, tx: p.x, ty: p.y, seated: false, seatY: 0, pose: 'stand', area: 'walkway', activity: null }); }
+  }
+  player.x = seat.x; player.y = seat.y; player.face = seat.face;
+  player.seated = !(o.type === 'craps' || o.type === 'bigsix');
+  player.pose = player.seated ? 'sit' : 'stand';
+}
+function standPlayer() {
+  if (player.returnTo) {
+    // step back from the seat
+    const back = { x: player.x - Math.sin(player.face) * 12, y: player.y - Math.cos(player.face) * 12 };
+    if (!hits(back.x, back.y)) { player.x = back.x; player.y = back.y; }
+    else if (!hits(player.returnTo.x, player.returnTo.y)) { player.x = player.returnTo.x; player.y = player.returnTo.y; }
+  }
+  player.seated = false; player.pose = 'stand';
+  view.yaw = player.face + Math.PI; view.pitch = 0.12;
 }
 
 // ---------------------------------------------------------------------------
@@ -369,34 +323,22 @@ function render(time) {
   } else prompt.classList.add('hidden');
 }
 
-const ROLE_EMOJI = {
-  gambler: '🧑', dealer: '🤵', waitress: '💁‍♀️', guard: '👮', bartender: '🧑‍🍳', clerk: '🧑‍💼', vendor: '🧑‍🍳',
-  homeless: '🧔', pedestrian: '🚶', robber: '🥷', thug: '🕴️', cashierClerk: '🧑‍💼',
-};
-
+const ROLE_EMOJI = { gambler: '🧑', dealer: '🤵', waitress: '💁‍♀️', guard: '👮', bartender: '🧑‍🍳', clerk: '🧑‍💼', vendor: '🧑‍🍳', homeless: '🧔', pedestrian: '🚶', robber: '🥷', thug: '🕴️', cashierClerk: '🧑‍💼' };
 function drawEmoji(e, x, y, size) {
   ctx.font = `${size}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(e, x, y);
 }
-
-function render2D(time) {
+function render2D() {
   const cam = camera2d;
   cam.x = clamp(player.x - cam.w / 2, 0, Math.max(0, WORLD.w - cam.w));
   cam.y = clamp(player.y - cam.h / 2, 0, Math.max(0, WORLD.h - cam.h));
-  ctx.fillStyle = '#0a0508';
-  ctx.fillRect(0, 0, cam.w, cam.h);
-  ctx.save();
-  ctx.translate(-Math.round(cam.x), -Math.round(cam.y));
+  ctx.fillStyle = '#0a0508'; ctx.fillRect(0, 0, cam.w, cam.h);
+  ctx.save(); ctx.translate(-Math.round(cam.x), -Math.round(cam.y));
   for (const z of ZONES) { ctx.fillStyle = z.color; ctx.fillRect(z.x, z.y, z.w, z.h); }
-  for (const o of OBJECTS) {
-    ctx.fillStyle = o.color;
-    ctx.fillRect(o.x, o.y, o.w, o.h);
-    if (o.emoji) drawEmoji(o.emoji, o.x + o.w / 2, o.y + o.h / 2, Math.min(28, o.h * 0.6));
-  }
-  for (const n of npcs) drawEmoji(ROLE_EMOJI[n.role] || '🧑', n.x, n.y, 24);
-  drawEmoji('🧑‍💼', player.x, player.y, 26);
+  for (const o of OBJECTS) { if (o.road) continue; ctx.fillStyle = o.type ? '#8a6a3a' : '#444'; ctx.fillRect(o.x, o.y, o.w, o.h); }
+  for (const n of npcs) drawEmoji(ROLE_EMOJI[n.role] || '🧑', n.x, n.y, 20);
+  drawEmoji('🧑‍💼', player.x, player.y, 22);
   ctx.restore();
 }
 
@@ -409,54 +351,44 @@ function drawMinimap() {
   if (cv.width !== size * dpr) { cv.width = size * dpr; cv.height = size * dpr; }
   const m = cv.getContext('2d');
   m.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const r = size / 2, sc = 0.11;
+  const r = size / 2, sc = 0.13;
   m.clearRect(0, 0, size, size);
   m.save();
   m.beginPath(); m.arc(r, r, r - 2, 0, Math.PI * 2); m.clip();
-  m.fillStyle = '#1b2a1b'; m.fillRect(0, 0, size, size);
-  m.translate(r, r);
-  m.rotate(view.yaw);
-  m.scale(sc, sc);
-  m.translate(-player.x, -player.y);
-  for (const z of ZONES) { m.fillStyle = z.color; m.fillRect(z.x, z.y, z.w, z.h); }
-  m.fillStyle = '#3a3a40'; m.fillRect(-2000, 1130, 6000, 110);
-  m.fillStyle = '#6b6b70'; m.fillRect(-2000, 1004, 6000, 126);
-  m.fillStyle = '#26323d'; m.fillRect(-2000, 1240, 6000, 800);
+  m.fillStyle = '#2e3b2c'; m.fillRect(0, 0, size, size);
+  m.translate(r, r); m.rotate(view.yaw); m.scale(sc, sc); m.translate(-player.x, -player.y);
+  m.fillStyle = '#3a3a40'; m.fillRect(-4000, 1130, 10000, 320);
+  m.fillStyle = '#6b6b70'; m.fillRect(-4000, 1004, 10000, 126);
+  m.fillStyle = '#26323d'; m.fillRect(-4000, 1450, 10000, 1200);
+  for (const z of ZONES) { if (z.floor === 'sidewalk') continue; m.fillStyle = z.walkway ? '#8a8278' : z.color; m.fillRect(z.x, z.y, z.w, z.h); }
   for (const o of OBJECTS) {
-    if (o.road) continue;
-    m.fillStyle = o.wall ? '#000' : 'rgba(255,255,255,0.35)';
+    if (o.road || !o.solid) continue;
+    m.fillStyle = o.wall || o.decor === 'glassWall' ? '#111' : 'rgba(255,255,255,0.35)';
     m.fillRect(o.x, o.y, o.w, o.h);
   }
   const icon = (x, y, txt, col) => {
     m.save(); m.translate(x, y); m.rotate(-view.yaw); m.scale(1 / sc, 1 / sc);
-    m.fillStyle = col; m.beginPath(); m.arc(0, 0, 6, 0, Math.PI * 2); m.fill();
+    m.fillStyle = col; m.beginPath(); m.arc(0, 0, 6.5, 0, Math.PI * 2); m.fill();
+    m.strokeStyle = '#000'; m.lineWidth = 1; m.stroke();
     m.fillStyle = '#fff'; m.font = 'bold 8px sans-serif'; m.textAlign = 'center'; m.textBaseline = 'middle';
     m.fillText(txt, 0, 0.5); m.restore();
   };
   const find = t => OBJECTS.find(o => o.type === t);
-  [['hotel', 'H', '#3b82f6'], ['buffet', 'F', '#f59e0b'], ['bar', 'B', '#8b5cf6'], ['gunstore', 'G', '#dc2626'],
-    ['pawn', '$', '#16a34a'], ['busstop', '⇢', '#0ea5e9'], ['soup', 'S', '#65a30d']].forEach(([t, l, c]) => {
+  [['hotel', 'H', '#3b82f6'], ['buffet', 'F', '#f59e0b'], ['bar', 'B', '#8b5cf6'], ['gunstore', 'G', '#dc2626'], ['cashier', '$', '#16a34a'],
+    ['pawn', 'P', '#16a34a'], ['busstop', '⇢', '#0ea5e9'], ['soup', 'S', '#65a30d'], ['roulette', 'R', '#15803d'], ['blackjack_hl', 'V', '#ca8a04']].forEach(([t, l, c]) => {
     const o = find(t); if (o) icon(o.x + o.w / 2, o.y + o.h / 2, l, c);
   });
-  for (const n of npcs) {
-    if (!n.hostile) continue;
-    icon(n.x, n.y, '', '#ef4444');
-  }
+  for (const n of npcs) if (n.hostile || (n.role === 'robber' || n.role === 'thug') && n.state === 'approach') icon(n.x, n.y, '', '#ef4444');
   m.restore();
-  // player arrow (always pointing where the character faces relative to camera)
-  m.save();
-  m.translate(r, r);
-  m.rotate(Math.PI - player.face + view.yaw);
+  m.save(); m.translate(r, r); m.rotate(Math.PI - player.face + view.yaw);
   m.fillStyle = '#fff'; m.strokeStyle = '#000'; m.lineWidth = 1.5;
-  m.beginPath(); m.moveTo(0, -8); m.lineTo(6, 7); m.lineTo(0, 3); m.lineTo(-6, 7); m.closePath();
-  m.fill(); m.stroke();
+  m.beginPath(); m.moveTo(0, -8); m.lineTo(6, 7); m.lineTo(0, 3); m.lineTo(-6, 7); m.closePath(); m.fill(); m.stroke();
   m.restore();
-  m.strokeStyle = 'rgba(0,0,0,0.8)'; m.lineWidth = 4;
+  m.strokeStyle = 'rgba(0,0,0,0.85)'; m.lineWidth = 4;
   m.beginPath(); m.arc(r, r, r - 2, 0, Math.PI * 2); m.stroke();
 }
 
-// GTA-style area name that fades in when you enter a new part of the map
-let currentZone = null, zoneTimer = null;
+let currentZone = null;
 function updateZoneName() {
   let z = null;
   for (const zone of ZONES) {

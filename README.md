@@ -6,20 +6,33 @@ You arrive in Las Vegas with **US$2,000,000**. Walk your character around the Go
 
 ## How to play
 
-The game is rendered in 3D with [Three.js](https://threejs.org), loaded from the jsDelivr CDN, so you need an internet connection.
+The game is rendered in 3D with [Three.js](https://threejs.org) (loaded from the jsDelivr CDN), so you need an internet connection.
 
-- **Easiest:** open `dist/golden-mirage.html` (a single bundled file) in any modern browser.
-- **From source:** browsers block ES modules on `file://`, so serve the folder first, e.g. `python3 -m http.server`, then open http://localhost:8000. If the 3D renderer can't load, the game falls back to a simple 2D top-down view.
-- After changing the source, rebuild the bundle with `python3 tools/build_single.py`.
+- **Easiest:** open `dist/golden-mirage.html` in any modern desktop browser. It's a single file with every script, model and animation embedded, so it's about 20 MB.
+- **From source:** browsers block ES modules and `fetch` on `file://`, so serve the folder first, e.g. `python3 -m http.server`, then open http://localhost:8000. If the 3D renderer can't load, the game falls back to a simple 2D top-down view.
+- **Rebuild** after changing the source: `python3 tools/build_single.py` (needs Node.js, since it runs esbuild through `npx`). `python3 tools/build_single.py --web OUT_DIR` writes a lighter page plus an `assets/` folder for web hosting.
 
-| Action | Keys / touch |
+| Action | Keyboard / mouse | Touch |
+| --- | --- | --- |
+| Look around | Click the game to capture the mouse, then move it | Drag with your right thumb |
+| Move | WASD, `Shift` to sprint, `X` to toggle walking | Left thumb stick, RUN button |
+| Camera distance | Mouse wheel or `V` | |
+| Talk / sit down at a game / use | `E` (face the person or object) | Tap the prompt |
+| Aim / shoot | Hold right mouse, then left click or `F` | AIM, then FIRE |
+| Switch weapon | `Q` | Q button |
+| Phone | `P` | 📱 button |
+| Close window / stand up from a game | `Esc` | ✕ / Leave |
+
+### Playing the casino games
+Walk up to a slot machine or table and press `E` to sit down. The camera moves to your seat and the game is played in 3D: the dealer deals real cards, chips stack up on the felt, the roulette ball drops into a pocket, dice bounce across the craps table and the Big Six wheel clicks to a stop. The first time you sit at each game a short **tutorial** explains the rules, the payouts and the real house edge. Press `T` at any time to see it again.
+
+| At the table | Keys |
 | --- | --- |
-| Walk / run | WASD or arrow keys, hold Shift to run, or tap where you want to go |
-| Camera | Drag to turn, scroll / pinch or `C` to zoom |
-| Talk / play / use | `E`, `Space`, or tap the person or object |
-| Phone | `P` or the 📱 button |
-| Switch weapon / fire | `Q` / `F`, or the on-screen buttons (tap an enemy to shoot at them) |
-| Close window | `Esc` |
+| Change bet | `↑` / `↓` (or the − / + buttons) · `M` max bet on slots |
+| Choose a bet (roulette, baccarat, craps, Big Six) | `←` / `→` or click the options · `Z` / `X` picks a roulette number |
+| Play (spin, deal, roll) | `Enter` / `Space` |
+| Blackjack | `H` hit · `S` stand · `D` double |
+| Tutorial / leave | `T` / `Esc` |
 
 ## Features
 
@@ -41,12 +54,14 @@ The game is rendered in 3D with [Three.js](https://threejs.org), loaded from the
 - **Soup kitchen** gives one free meal a day. The **pawn shop** buys your belongings for a fraction of their value.
 
 ### The world and its people
-- A GTA-style third-person camera, a rotating radar, a day/night cycle, neon signs, street traffic and palm-lined sidewalks on the Strip.
+- An over-the-shoulder GTA-style camera with mouse look, camera collision and an aiming mode, a rotating radar, a day/night cycle with a real sky, neon signs, street traffic and palm-lined sidewalks on the Strip.
+- A bright, busy casino floor: patterned carpet, crystal chandeliers, rows of animated slot machines under progressive jackpot signs, blackjack, roulette, craps, baccarat and Big Six tables, a high-limit room, a bar, a food court and a hotel lobby.
+- Realistic motion-captured people (Microsoft Rocketbox avatars) who walk, sit, talk on the phone, drink, cheer and clap when someone wins big.
 - Dealers, seated gamblers, cocktail waitresses, security guards, bartenders, pedestrians and a homeless man named Eddie. Walk up to anyone to talk: some tell you their stories, some want to borrow money, and the dealers will tell you the truth about the odds.
 
 ### Robbers, guns and self-defense
 - Robbers wait outside, especially at night and after people see you win big. When one stops you, you can hand over the cash, run, fight with your fists, or draw a weapon.
-- The **gun store** on the Strip sells a pistol, a pump shotgun, ammo and body armor. Shootouts are real-time: keep moving, fire with `F` or by tapping the enemy.
+- The **gun store** on the Strip sells a pistol, a pump shotgun, ammo and body armor. Shootouts are real-time: keep moving, hold right mouse to aim over the shoulder and click (or `F`) to fire.
 - You can also fight back against Tony's crew, but it doesn't erase the debt: Tony adds 25% "damages" and sends more people next time.
 - Firing a gun when nobody is attacking you gets you fined, and inside the casino security confiscates your weapons.
 - If your health reaches zero you wake up in hospital with a $25,000 bill.
@@ -66,6 +81,14 @@ The more you bet, the more "free" stuff you get: free drinks (Silver), free buff
 - Or take the **bus out of town** at any time to walk away with whatever you have left.
 
 Either way you can start again with $2M, and the house will win again.
+
+## Credits and licenses
+
+- 3D people and animations: [Microsoft Rocketbox Avatar Library](https://github.com/microsoft/Microsoft-Rocketbox) (MIT). Converted to compressed glTF, animations repacked into `assets/anims.bin`.
+- Car: "Ferrari 458 Italia" by [vicent091036](https://sketchfab.com/models/57bf6cc56931426e87494f554df1dab6), as shipped with the [three.js examples](https://github.com/mrdoob/three.js/tree/dev/examples/models/gltf), interior removed.
+- Lighting: `royal_esplanade` and `venice_sunset` HDR environments from the three.js examples (from HDRI Haven / Poly Haven, CC0), downsampled.
+- Sofa and chair: `GlamVelvetSofa` and `ChairDamaskPurplegold` from the [Khronos glTF Sample Assets](https://github.com/KhronosGroup/glTF-Sample-Assets) (© 2021 Wayfair LLC, CC BY 4.0).
+- Engine: [three.js](https://threejs.org) (MIT). Everything else (casino, street, tables, cards, chips, slot screens, textures) is generated in code.
 
 ---
 *If gambling is a problem for you or someone you know, call or text 1-800-GAMBLER (US) or visit gamblersanonymous.org.*

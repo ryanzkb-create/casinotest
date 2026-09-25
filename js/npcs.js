@@ -49,61 +49,76 @@ function makeLook(role, forceFemale) {
 }
 
 function makeNPC(role, x, y, opts = {}) {
-  const female = opts.female;
-  const look = makeLook(role, female);
+  const female = opts.female !== undefined ? opts.female : Math.random() < 0.45;
   return Object.assign({
-    role, x, y, look,
-    name: opts.name || (look.female ? pick(FEMALE_NAMES) : pick(MALE_NAMES)),
+    role, x, y,
+    name: opts.name || (female ? pick(FEMALE_NAMES) : pick(MALE_NAMES)),
     face: opts.face !== undefined ? opts.face : 0, pose: 'stand', anim: rand(0, 10),
-    tx: x, ty: y, wait: rand(0, 4), speed: rand(35, 60), area: null,
-    bubble: null, bubbleT: 0, talk: true, hp: 100, hostile: false,
+    tx: x, ty: y, wait: rand(0, 4), speed: rand(24, 30), area: null,
+    bubble: null, bubbleT: 0, talk: true, hp: 100, hostile: false, seatY: 0,
   }, opts);
 }
 
-// Seats in front of tables & machines (the renderer draws stools here)
-function tableSeats(o) {
-  const n = o.type === 'bigsix' ? 0 : o.type === 'craps' ? 4 : 3;
-  const seats = [];
-  for (let i = 0; i < n; i++) seats.push({ x: o.x + o.w * (i + 1) / (n + 1), y: o.y + o.h + 14 });
-  return seats;
-}
-function slotSeat(o) { return { x: o.x + o.w / 2, y: o.y + o.h + 14 }; }
-
 const DEALER_TABLES = ['blackjack', 'blackjack_hl', 'baccarat', 'baccarat_hl', 'roulette', 'craps', 'bigsix'];
+const CHAIR_H = { slots: 0.62, table: 0.72, bar: 0.78 };
 
 function spawnNPCs() {
   npcs = [];
-  const face = { south: 0, north: Math.PI };
   for (const o of OBJECTS) {
     if (DEALER_TABLES.includes(o.type)) {
-      npcs.push(makeNPC('dealer', o.x + o.w / 2, o.y - 14, { face: face.south, table: o }));
-      tableSeats(o).forEach(s => {
-        if (Math.random() < 0.55) npcs.push(makeNPC('gambler', s.x, s.y, { face: face.north, pose: 'sit', seated: true }));
-      });
+      const st = staffSpot(o);
+      // the croupier works beside the wheel, which sits at one end of the table
+      if (o.type === 'roulette') st.x += (o.dir === 'N' ? 1 : -1) * (o.w / 2 - M(0.9));
+      npcs.push(makeNPC('dealer', st.x, st.y, { face: st.face, table: o }));
+      if (o.type === 'craps') {
+        for (let i = 0; i < 3; i++) if (Math.random() < 0.7) { const s = seatOf(o, 0.2 + i * 0.3); npcs.push(makeNPC('gambler', s.x, s.y, { face: s.face, activity: i === 1 ? 'cheer' : null })); }
+      } else {
+        tableSeats(o).forEach(s => {
+          if (Math.random() < 0.55) npcs.push(makeNPC('gambler', s.x, s.y, { face: s.face, pose: 'sit', seated: true, seatY: CHAIR_H.table - 0.48 }));
+        });
+      }
     }
-    if (o.type === 'slots' && Math.random() < 0.4) {
+    if (o.type === 'slots' && Math.random() < 0.3) {
       const s = slotSeat(o);
-      npcs.push(makeNPC('gambler', s.x, s.y, { face: face.north, pose: 'sit', seated: true, slot: o }));
+      npcs.push(makeNPC('gambler', s.x, s.y, { face: s.face, pose: 'sit', seated: true, slot: o, seatY: CHAIR_H.slots - 0.48 }));
+    }
+    if (o.type === 'bar') {
+      // bartender works inside the ring
+      npcs.push(makeNPC('bartender', o.x + o.w * 0.35, o.y + o.h / 2 + 15, { face: 0, service: 'bar', name: 'Marco' }));
+      for (let i = 0; i < 5; i++) {
+        const side = i % 2 ? -1 : 1;
+        const x = o.x + o.w * (0.2 + (i / 5) * 0.6), y = side > 0 ? o.y + o.h + 14 : o.y - 14;
+        npcs.push(makeNPC('gambler', x, y, { face: side > 0 ? Math.PI : 0, pose: 'sit', seated: true, seatY: CHAIR_H.bar - 0.48 }));
+      }
     }
   }
-  const staff = [
-    ['bartender', 1585, 505, 'bar'], ['vendor', 1480, 76, 'hotdog'], ['vendor', 1655, 76, 'buffet'],
-    ['vendor', 1505, 246, 'steak'], ['clerk', 1540, 766, 'hotel'], ['cashierClerk', 160, 656, 'cashier'],
-  ];
-  staff.forEach(([role, x, y, service]) => npcs.push(makeNPC(role, x, y, { face: face.south, service })));
-  npcs.push(makeNPC('guard', 830, 962, { face: face.south, name: 'Officer Reyes' }));
-  npcs.push(makeNPC('guard', 970, 962, { face: face.south, name: 'Officer Dunn' }));
-  npcs.push(makeNPC('guard', 1000, 300, { area: 'casino', speed: 45, name: 'Officer Park' }));
-  npcs.push(makeNPC('waitress', 900, 520, { area: 'casino', speed: 55 }));
-  npcs.push(makeNPC('waitress', 300, 300, { area: 'casino', speed: 55 }));
-  for (let i = 0; i < 10; i++) {
-    const p = randomWalkable('casino');
-    npcs.push(makeNPC('gambler', p.x, p.y, { area: 'casino' }));
+  for (const [service, role] of [['hotdog', 'vendor'], ['buffet', 'vendor'], ['steak', 'vendor'], ['hotel', 'clerk'], ['cashier', 'cashierClerk']]) {
+    const o = OBJECTS.find(q => q.type === service);
+    if (!o) continue;
+    const st = staffSpot(o);
+    npcs.push(makeNPC(role, st.x, st.y, { face: st.face, service }));
   }
-  npcs.push(makeNPC('homeless', 228, 1060, { face: face.south, pose: 'sit', name: 'Eddie' }));
-  for (let i = 0; i < 5; i++) {
+  npcs.push(makeNPC('guard', 820, 955, { face: 0, name: 'Officer Reyes' }));
+  npcs.push(makeNPC('guard', 980, 955, { face: 0, name: 'Officer Dunn' }));
+  npcs.push(makeNPC('guard', M(45), M(20), { area: 'walkway', speed: 26, name: 'Officer Park' }));
+  npcs.push(makeNPC('waitress', M(45), M(30), { area: 'walkway', speed: 26 }));
+  npcs.push(makeNPC('waitress', M(20), M(37.5), { area: 'walkway', speed: 26 }));
+  for (let i = 0; i < 12; i++) {
+    const p = randomWalkable(i % 2 ? 'walkway' : 'casino');
+    npcs.push(makeNPC('gambler', p.x, p.y, { area: i % 2 ? 'walkway' : 'casino', drunk: i === 3 }));
+  }
+  // standing groups: chatting, on the phone, drinking
+  const groups = [[M(38.8), M(37.8)], [M(66), M(37.5)], [M(12), M(44.5)], [M(52), M(37.8)]];
+  groups.forEach(([x, y], gi) => {
+    if (gi === 2) { npcs.push(makeNPC('gambler', x, y, { face: rand(0, 6), activity: 'phone' })); return; }
+    npcs.push(makeNPC('gambler', x, y, { face: Math.PI / 2, activity: 'talk' }));
+    npcs.push(makeNPC('gambler', x + 22, y, { face: -Math.PI / 2, activity: gi === 1 ? 'drink' : 'listen' }));
+  });
+  const cb = OBJECTS.find(o => o.type === 'streetsleep');
+  npcs.push(makeNPC('homeless', cb.x + cb.w + 20, cb.y + cb.h / 2, { face: 0, pose: 'sit', seated: true, seatY: 0, name: 'Eddie' }));
+  for (let i = 0; i < 6; i++) {
     const p = randomWalkable('street');
-    npcs.push(makeNPC('pedestrian', p.x, p.y, { area: 'street', speed: rand(45, 70) }));
+    npcs.push(makeNPC('pedestrian', p.x, p.y, { area: 'street', speed: rand(24, 32), activity: i === 0 ? 'phone' : null }));
   }
 }
 
@@ -156,8 +171,10 @@ const AMBIENT = {
 
 function crowdReact() {
   npcs.forEach(n => {
-    if ((n.role === 'gambler' || n.role === 'dealer' || n.role === 'waitress') && Math.hypot(n.x - player.x, n.y - player.y) < 260)
+    if ((n.role === 'gambler' || n.role === 'dealer' || n.role === 'waitress') && Math.hypot(n.x - player.x, n.y - player.y) < 260) {
       sayBubble(n, pick(['Whoa!', 'Nice hit!', 'Lucky!', 'Let it ride!', 'Share the love!', 'Big winner!']), 5);
+      if (window.Render3D && Render3D.ready && n.role !== 'dealer') Render3D.gesture(n, Math.random() < 0.5 ? 'cheer' : 'clap');
+    }
   });
   lesson('marked', 'People noticed your big win. Word travels fast. Robbers look for people carrying winnings outside at night.');
 }

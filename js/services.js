@@ -22,14 +22,8 @@ function interact(o) {
     return;
   }
   switch (o.type) {
-    case 'slots': return openSlots();
-    case 'roulette': return openRoulette();
-    case 'blackjack': return openBlackjack(false);
-    case 'blackjack_hl': return openBlackjack(true);
-    case 'baccarat': return openBaccarat(false);
-    case 'baccarat_hl': return openBaccarat(true);
-    case 'craps': return openCraps();
-    case 'bigsix': return openBigSix();
+    case 'slots': case 'roulette': case 'blackjack': case 'blackjack_hl': case 'baccarat': case 'baccarat_hl':
+    case 'craps': case 'bigsix': return startGame(o);
     case 'hotdog': return foodStand();
     case 'buffet': return buffet();
     case 'steak': return steakhouse();
@@ -263,6 +257,7 @@ function busStop() {
 // Consequences
 // ---------------------------------------------------------------------------
 function collapse(cause) {
+  leaveGame(true);
   closeModal(true);
   closePhone();
   const st = S.stats;
@@ -285,6 +280,7 @@ function collapse(cause) {
 }
 
 function harass() {
+  leaveGame(true);
   const k = S.shark;
   S.stats.harassed++;
   const sev = k.overdueDays;

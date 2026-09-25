@@ -15,6 +15,8 @@
   <canvas id="game"></canvas>
   <div id="bubbles"></div>
   <div id="hurt"></div>
+  <div id="crosshair" class="hidden"><i></i><i></i><i></i><i></i></div>
+  <div id="stick"><div id="stick-knob"></div></div>
 
   <!-- Top right: money, debt, time, weapon (GTA style) -->
   <div id="hud-top">
@@ -52,6 +54,8 @@
     <button id="helpBtn" title="How to play">?</button>
   </div>
   <div id="action-buttons">
+    <button id="sprintBtn" class="touch-only" title="Sprint">RUN</button>
+    <button id="aimBtn" class="touch-only" title="Aim">AIM</button>
     <button id="fireBtn" class="hidden" title="Fire (F)">FIRE</button>
     <button id="weaponBtn" title="Switch weapon (Q)">Q</button>
     <button id="phoneBtn" title="Phone (P)">📱<span id="badge" class="hidden">0</span></button>
@@ -78,10 +82,42 @@
     </div>
   </div>
 
+  <!-- Seated casino game: GTA Online style instructional overlay -->
+  <div id="game-ui" class="hidden">
+    <div id="gu-panel">
+      <div id="gu-title"></div>
+      <div id="gu-info"></div>
+      <div id="gu-options" class="hidden"></div>
+      <div id="gu-bet">
+        <button id="gu-bet-down" title="Lower bet (↓)">−</button>
+        <div class="gu-bet-mid"><span>YOUR BET</span><b id="gu-bet-amt"></b><small id="gu-limits"></small></div>
+        <button id="gu-bet-up" title="Raise bet (↑)">+</button>
+      </div>
+    </div>
+    <div id="gu-buttons"></div>
+    <div id="gu-banner"></div>
+  </div>
+
+  <div id="tutorial" class="hidden">
+    <div class="tut-card">
+      <div id="tut-kicker"></div>
+      <h2 id="tut-title"></h2>
+      <div id="tut-body"></div>
+      <div id="tut-dots"></div>
+      <div class="tut-actions">
+        <button id="tut-skip" class="btn ghost">Skip</button>
+        <span></span>
+        <button id="tut-prev" class="btn">Back</button>
+        <button id="tut-next" class="btn primary">Next</button>
+      </div>
+    </div>
+  </div>
+
   <div id="screen" class="hidden"></div>
 
   <script src="js/state.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/layout.js"></script>
   <script src="js/world.js"></script>
   <script src="js/npcs.js"></script>
   <script src="js/combat.js"></script>
@@ -97,6 +133,6 @@
     }
   }
   </script>
-  <script type="module" src="js/render3d.js"></script>
+  <script type="module" src="js/r3d/main.js"></script>
 </body>
 </html>

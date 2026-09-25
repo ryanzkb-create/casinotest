@@ -1,7 +1,8 @@
 'use strict';
 
 
-function startGame() {
+function newGame() {
+  leaveGame(true);
   S = newState();
   buildWorld();
   resetEntities();
@@ -22,8 +23,9 @@ function showIntro() {
     <p class="tagline">You just arrived with <b>${fmt(CONFIG.START_CASH)}</b>. The house has never lost. Try to keep it.</p>
     <div class="intro-grid">
       <div><h3>Controls</h3>
-        <p><b>WASD</b> walk · <b>Shift</b> run · <b>drag</b> to turn the camera · <b>scroll</b> or <b>C</b> to zoom.
-        <b>Tap</b> a spot to walk there. <b>E</b> talk / play / use. <b>P</b> phone. <b>Q</b> switch weapon, <b>F</b> fire.</p></div>
+        <p><b>Click</b> the game to lock the mouse, then <b>mouse</b> looks around · <b>WASD</b> move · <b>Shift</b> sprint · <b>X</b> walk · <b>V</b>/scroll camera distance.
+        <b>E</b> talk, sit at a table, use. <b>Right mouse</b> aim, <b>left click</b> or <b>F</b> fire, <b>Q</b> weapon. <b>P</b> phone.
+        On touch: left thumb moves, right thumb looks.</p></div>
       <div><h3>Survive</h3>
         <p>Keep your <b>hunger</b>, <b>thirst</b>, <b>energy</b> and <b>health</b> up. Eat, drink, sleep at the hotel or on the street. Talk to the people you meet.</p></div>
       <div><h3>Gamble</h3>
@@ -34,12 +36,33 @@ function showIntro() {
         <p>Broke? Your phone can get a loan from the <b>bank</b> or from <b>Tony the loan shark</b>. Pay Tony late and his crew comes for you. <b>Debt over ${fmtShort(CONFIG.GAME_OVER_DEBT)} ends the game.</b></p></div>
     </div>
     <p class="warning">Every game here has a house edge. This game shows why gambling always loses money in the end, just like the real thing.</p>
-    <button class="btn primary big" id="start-btn">Walk into the casino</button>`);
+    <button class="btn primary big" id="start-btn" ${assetsReady ? '' : 'disabled'}>${assetsReady ? 'Walk into the casino' : 'Loading Las Vegas…'}</button>
+    <div id="load-bar" class="${assetsReady ? 'hidden' : ''}"><div style="width:${Math.round(loadProgress * 100)}%"></div></div>
+    <div class="load-note ${assetsReady ? 'hidden' : ''}">Loading realistic 3D people, lighting and the Strip (about 15 MB).</div>`);
   s.querySelector('#start-btn').onclick = () => { hideScreen(); sfx('far'); };
 }
 
+let assetsReady = false, loadProgress = 0;
+window.onRender3DProgress = p => {
+  loadProgress = p;
+  const bar = document.querySelector('#load-bar div');
+  if (bar) bar.style.width = Math.round(p * 100) + '%';
+  const b = document.querySelector('#start-btn');
+  if (b && !assetsReady) b.textContent = `Loading Las Vegas… ${Math.round(p * 100)}%`;
+};
+const markReady = () => {
+  assetsReady = true;
+  const b = document.querySelector('#start-btn');
+  if (b) { b.disabled = false; b.textContent = 'Walk into the casino'; }
+  document.querySelectorAll('#load-bar, .load-note').forEach(e => e.classList.add('hidden'));
+};
+window.onRender3DReady = markReady;
+window.onRender3DFailed = markReady;
+setTimeout(() => { if (!window.Render3D) markReady(); }, 8000); // module never loaded: 2D fallback
+
 function endGame(reason) {
   if (S.ended) return;
+  leaveGame(true);
   S.ended = true;
   closeModal(true);
   closePhone();
@@ -85,7 +108,7 @@ function endGame(reason) {
     <p class="warning">The house edge is small on each bet, but it never stops working. The more you bet, the more certain your loss.</p>
     <p class="muted">Gambling problem? Call or text <b>1-800-GAMBLER</b> (US) or visit gamblersanonymous.org.</p>
     <button class="btn primary big" id="restart-btn">Start again with ${fmtShort(CONFIG.START_CASH)}</button>`);
-  s.querySelector('#restart-btn').onclick = () => startGame();
+  s.querySelector('#restart-btn').onclick = () => newGame();
 }
 
 // ---------------------------------------------------------------------------
@@ -115,7 +138,8 @@ function init() {
   $('#phone-close').onclick = () => closePhone();
   $('#modal-close').onclick = () => closeModal();
   $('#helpBtn').onclick = () => { if (!modalOpen && !phoneOpen) showIntro(); };
-  startGame();
+  setupGameUI();
+  newGame();
   showIntro();
   requestAnimationFrame(frame);
 }
