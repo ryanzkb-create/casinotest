@@ -9,6 +9,7 @@ You arrive in Las Vegas with **US$2,000,000**. Walk your character around the Go
 The game is rendered in 3D with [Three.js](https://threejs.org) (loaded from the jsDelivr CDN), so you need an internet connection.
 
 - **Easiest:** open `dist/golden-mirage.html` in any modern desktop browser. It's a single file with every script, model and animation embedded, so it's about 20 MB.
+- **Hosted (e.g. Vercel):** the repo root is a static site with no build step: `index.html` loads the engine from `js/` and streams the models from `assets/`. `vercel.json` only adds browser caching for `assets/`.
 - **From source:** browsers block ES modules and `fetch` on `file://`, so serve the folder first, e.g. `python3 -m http.server`, then open http://localhost:8000. If the 3D renderer can't load, the game falls back to a simple 2D top-down view.
 - **Rebuild** after changing the source: `python3 tools/build_single.py` (needs Node.js, since it runs esbuild through `npx`). `python3 tools/build_single.py --web OUT_DIR` writes a lighter page plus an `assets/` folder for web hosting (add `--text-assets` for hosts that only serve text files, and `--fragment` for hosts that wrap the page in their own `<html>` skeleton).
 
