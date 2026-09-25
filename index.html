@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>The House Always Wins</title>
+  <meta name="description" content="A casino life simulator that shows why gambling always loses money.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="hud">
+    <div class="hud-panel money">
+      <div class="row"><span>Cash</span><b id="h-cash"></b></div>
+      <div class="row"><span>Debt</span><b id="h-debt"></b></div>
+      <div class="row"><span>Net vs start</span><b id="h-net"></b></div>
+      <div id="debt-meter" class="hidden" title="Game over at $1,000,000 debt">
+        <div class="meter"><div id="b-debt"></div></div>
+        <small>Debt limit $1M</small>
+      </div>
+    </div>
+    <div class="hud-panel vitals">
+      <div class="vital"><span>🍔</span><div class="bar"><div id="b-hunger" class="fill hunger"></div></div></div>
+      <div class="vital"><span>💧</span><div class="bar"><div id="b-thirst" class="fill thirst"></div></div></div>
+      <div class="vital"><span>⚡</span><div class="bar"><div id="b-energy" class="fill energy"></div></div></div>
+      <div class="row small"><span id="h-time"></span><span class="tier">🎟️ <span id="h-tier"></span></span></div>
+    </div>
+  </div>
+
+  <div id="top-buttons">
+    <button id="helpBtn" title="How to play">❔</button>
+    <button id="phoneBtn" title="Phone (P)">📱<span id="badge" class="hidden">0</span></button>
+  </div>
+
+  <div id="prompt" class="hidden"></div>
+  <div id="toasts"></div>
+
+  <div id="modal" class="hidden">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h2 id="modal-title"></h2>
+        <button id="modal-close" title="Close (Esc)">✕</button>
+      </div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <div id="phone" class="hidden">
+    <div class="phone-frame">
+      <div class="phone-notch"><span id="phone-time"></span><button id="phone-close">✕</button></div>
+      <div id="phone-screen"></div>
+    </div>
+  </div>
+
+  <div id="screen" class="hidden"></div>
+
+  <script src="js/state.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/games.js"></script>
+  <script src="js/phone.js"></script>
+  <script src="js/services.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
