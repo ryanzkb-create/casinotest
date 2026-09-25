@@ -23,8 +23,10 @@ function openPhone(app = 'home') {
   showApp(app);
 }
 function closePhone() {
+  if (!phoneOpen) return;
   phoneOpen = false;
   $('#phone').classList.add('hidden');
+  if (typeof relockMouse === 'function') relockMouse();   // back to mouse look, like GTA
 }
 
 function showApp(id) {

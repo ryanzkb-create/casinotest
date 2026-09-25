@@ -140,6 +140,14 @@ function endGame(reason) {
 // Main loop
 // ---------------------------------------------------------------------------
 let lastFrame = performance.now();
+// set when the mouse was captured before the phone opened, so closing it can re-capture
+let mouseWasLocked = false;
+function relockMouse() {
+  if (!mouseWasLocked || blocked()) return;
+  mouseWasLocked = false;
+  const cv = document.getElementById('game3d');
+  try { const p = cv.requestPointerLock && cv.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* needs a click instead */ }
+}
 function frame(t) {
   const dt = Math.min(0.05, (t - lastFrame) / 1000);
   lastFrame = t;
@@ -149,7 +157,7 @@ function frame(t) {
     afterAction();
   }
   // free the mouse whenever the phone, a dialog, a menu or a table game is open
-  if (document.pointerLockElement && blocked()) document.exitPointerLock();
+  if (document.pointerLockElement && blocked()) { document.exitPointerLock(); mouseWasLocked = true; }
   render(t);
   updateHUD();
   requestAnimationFrame(frame);
