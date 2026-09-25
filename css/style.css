@@ -262,6 +262,14 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .intro-grid > div { background: rgba(255,255,255,0.06); border-radius: 12px; padding: 10px 14px; }
 .intro-grid h3 { margin: 4px 0; color: var(--gold); font-family: var(--label); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
 .intro-grid p { font-size: 14px; margin: 6px 0; }
+.settings { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; text-align: left; background: rgba(255,255,255,0.06); border-radius: 12px; padding: 10px 14px; margin: 0 0 14px; }
+.settings h3 { margin: 4px 0; color: var(--gold); font-family: var(--label); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+.settings label { font-size: 14px; display: flex; justify-content: space-between; gap: 8px; }
+.settings label b { color: var(--gold); font-variant-numeric: tabular-nums; }
+.settings input[type=range] { width: 100%; accent-color: var(--gold); }
+.settings select { flex: 1; min-width: 0; font: inherit; font-size: 15px; padding: 7px 8px; border-radius: 8px; border: 1px solid var(--gold-dim); background: #0e070c; color: var(--text); }
+.set-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.settings .muted { margin: 2px 0 0; }
 .warning { background: rgba(255, 92, 108, 0.12); border: 1px solid rgba(255, 92, 108, 0.5); border-radius: 10px; padding: 10px; }
 .end-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 6px; margin: 16px 0; text-align: left; }
 .end-stats div { display: flex; justify-content: space-between; background: rgba(255,255,255,0.06); padding: 8px 12px; border-radius: 8px; font-size: 14px; }

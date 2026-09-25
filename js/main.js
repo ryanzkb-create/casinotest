@@ -35,11 +35,34 @@ function showIntro() {
       <div><h3>Debt</h3>
         <p>Broke? Your phone can get a loan from the <b>bank</b> or from <b>Tony the loan shark</b>. Pay Tony late and his crew comes for you. <b>Debt over ${fmtShort(CONFIG.GAME_OVER_DEBT)} ends the game.</b></p></div>
     </div>
+    <div class="settings">
+      <h3>Settings</h3>
+      <label for="set-sens">Mouse &amp; touch look speed <b id="set-sens-val">${SETTINGS.sens.toFixed(1)}×</b></label>
+      <input type="range" id="set-sens" min="0.4" max="3" step="0.1" value="${SETTINGS.sens}">
+      <label for="set-quality">Graphics</label>
+      <div class="set-row">
+        <select id="set-quality">
+          <option value="auto">Auto${window.Render3D && Render3D.quality ? ` (${['Low', 'Medium', 'High'][Render3D.quality.level]})` : ''}</option>
+          <option value="0">Low: smoothest, no shadows</option>
+          <option value="1">Medium: shadows, fewer lights</option>
+          <option value="2">High: soft shadows, ambient occlusion</option>
+        </select>
+        <button class="btn hidden" id="set-reload">Reload to apply</button>
+      </div>
+      <p class="muted">If the game stutters, choose Low. Changing graphics reloads the page and starts a new game.</p>
+    </div>
     <p class="warning">Every game here has a house edge. This game shows why gambling always loses money in the end, just like the real thing.</p>
     <button class="btn primary big" id="start-btn" ${assetsReady ? '' : 'disabled'}>${assetsReady ? 'Walk into the casino' : 'Loading Las Vegas…'}</button>
     <div id="load-bar" class="${assetsReady ? 'hidden' : ''}"><div style="width:${Math.round(loadProgress * 100)}%"></div></div>
     <div class="load-note ${assetsReady ? 'hidden' : ''}">Loading realistic 3D people, lighting and the Strip (about 15 MB).</div>`);
   s.querySelector('#start-btn').onclick = () => { hideScreen(); sfx('far'); };
+  const sens = s.querySelector('#set-sens'), sensVal = s.querySelector('#set-sens-val');
+  sens.oninput = () => { SETTINGS.sens = +sens.value; sensVal.textContent = SETTINGS.sens.toFixed(1) + '×'; saveSettings(); };
+  const qual = s.querySelector('#set-quality'), reload = s.querySelector('#set-reload');
+  qual.value = String(SETTINGS.quality);
+  const startQuality = String(SETTINGS.quality);
+  qual.onchange = () => { SETTINGS.quality = qual.value; saveSettings(); reload.classList.toggle('hidden', qual.value === startQuality); };
+  reload.onclick = () => location.reload();
 }
 
 let assetsReady = false, loadProgress = 0;
@@ -55,6 +78,8 @@ const markReady = () => {
   const b = document.querySelector('#start-btn');
   if (b) { b.disabled = false; b.textContent = 'Walk into the casino'; }
   document.querySelectorAll('#load-bar, .load-note').forEach(e => e.classList.add('hidden'));
+  const auto = document.querySelector('#set-quality option[value="auto"]');
+  if (auto && window.Render3D && Render3D.quality) auto.textContent = `Auto (${['Low', 'Medium', 'High'][Render3D.quality.level]})`;
 };
 window.onRender3DReady = markReady;
 window.onRender3DFailed = markReady;

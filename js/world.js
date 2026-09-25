@@ -11,6 +11,16 @@ let npcs = [];
 let cars = [];
 const view = { yaw: 0, pitch: 0.12, zoom: 1, aiming: false, walk: false };
 
+// Player settings, kept in this browser. `sens` scales mouse/touch look speed;
+// `quality` is 'auto' or a graphics preset 0-2 (read by js/r3d/main.js at start-up).
+const SETTINGS = (() => {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem('gm_settings') || '{}') || {}; } catch (e) { /* storage unavailable */ }
+  return Object.assign({ sens: 1, quality: 'auto' }, saved);
+})();
+function saveSettings() { try { localStorage.setItem('gm_settings', JSON.stringify(SETTINGS)); } catch (e) { /* storage unavailable */ } }
+const LOOK_SPEED = 0.0045;   // radians per mouse pixel at sensitivity 1
+
 function resetEntities() {
   player.x = 900; player.y = 1104; player.face = Math.PI; player.pose = 'stand'; player.seated = false; player.seatY = 0;
   view.yaw = 0; view.pitch = 0.12;
@@ -120,7 +130,6 @@ function setupInput() {
 
   const surface = document.getElementById('game3d');
   const surfaces = [surface, document.getElementById('game')];
-  const sens = 0.0024;
   const locked = () => document.pointerLockElement === surface;
   let drag = null;
   surfaces.forEach(cv => {
@@ -138,6 +147,7 @@ function setupInput() {
     window.addEventListener('mouseup', e => { if (e.button === 2) view.aiming = false; if (e.button === 0) drag = null; });
     cv.addEventListener('mousemove', e => {
       if (blocked()) return;
+      const sens = LOOK_SPEED * SETTINGS.sens;
       if (locked()) { view.yaw -= e.movementX * sens; view.pitch += e.movementY * sens; }
       else if (drag) { view.yaw -= (e.clientX - drag.x) * sens * 1.4; view.pitch += (e.clientY - drag.y) * sens * 1.4; drag.x = e.clientX; drag.y = e.clientY; }
       view.pitch = clamp(view.pitch, -0.55, 1.15);
@@ -170,7 +180,7 @@ function setupInput() {
         knob.style.transform = `translate(${dx}px, ${dy}px)`;
         touch.mx = dx / max; touch.my = dy / max; touch.active = true;
       } else {
-        view.yaw -= (t.clientX - s.x) * 0.006; view.pitch = clamp(view.pitch + (t.clientY - s.y) * 0.005, -0.55, 1.15);
+        view.yaw -= (t.clientX - s.x) * 0.009 * SETTINGS.sens; view.pitch = clamp(view.pitch + (t.clientY - s.y) * 0.007 * SETTINGS.sens, -0.55, 1.15);
         s.x = t.clientX; s.y = t.clientY;
       }
       e.preventDefault();
@@ -316,11 +326,13 @@ function render(time) {
   drawMinimap();
   updateZoneName();
   const prompt = $('#prompt');
-  const near = nearbyTarget();
-  if (near && !blocked()) {
-    prompt.innerHTML = `<b>E</b> ${targetLabel(near)}`;
-    prompt.classList.remove('hidden');
-  } else prompt.classList.add('hidden');
+  const near = blocked() ? null : nearbyTarget();
+  const html = near ? `<b>E</b> ${targetLabel(near)}` : '';
+  if (html !== render.prompt) {   // only touch the DOM when the prompt changes
+    render.prompt = html;
+    if (html) prompt.innerHTML = html;
+    prompt.classList.toggle('hidden', !html);
+  }
 }
 
 const ROLE_EMOJI = { gambler: '🧑', dealer: '🤵', waitress: '💁‍♀️', guard: '👮', bartender: '🧑‍🍳', clerk: '🧑‍💼', vendor: '🧑‍🍳', homeless: '🧔', pedestrian: '🚶', robber: '🥷', thug: '🕴️', cashierClerk: '🧑‍💼' };
@@ -343,20 +355,16 @@ function render2D() {
 }
 
 // GTA-style rotating radar
-function drawMinimap() {
-  const cv = document.getElementById('minimap');
-  if (!cv) return;
-  const size = cv.clientWidth || 160;
-  const dpr = window.devicePixelRatio || 1;
-  if (cv.width !== size * dpr) { cv.width = size * dpr; cv.height = size * dpr; }
-  const m = cv.getContext('2d');
-  m.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const r = size / 2, sc = 0.13;
-  m.clearRect(0, 0, size, size);
-  m.save();
-  m.beginPath(); m.arc(r, r, r - 2, 0, Math.PI * 2); m.clip();
-  m.fillStyle = '#2e3b2c'; m.fillRect(0, 0, size, size);
-  m.translate(r, r); m.rotate(view.yaw); m.scale(sc, sc); m.translate(-player.x, -player.y);
+// The static part of the radar (roads, floors, walls, tables) is drawn once into
+// an offscreen canvas; each frame only blits it rotated and adds the icons.
+const MINIMAP = { cache: null, x0: -600, y0: -200, w: 3000, h: 1900, k: 0.4, last: 0 };
+function minimapCache() {
+  if (MINIMAP.cache && MINIMAP.objects === OBJECTS.length) return MINIMAP.cache;
+  const c = document.createElement('canvas');
+  c.width = MINIMAP.w * MINIMAP.k; c.height = MINIMAP.h * MINIMAP.k;
+  const m = c.getContext('2d');
+  m.scale(MINIMAP.k, MINIMAP.k); m.translate(-MINIMAP.x0, -MINIMAP.y0);
+  m.fillStyle = '#2e3b2c'; m.fillRect(MINIMAP.x0, MINIMAP.y0, MINIMAP.w, MINIMAP.h);
   m.fillStyle = '#3a3a40'; m.fillRect(-4000, 1130, 10000, 320);
   m.fillStyle = '#6b6b70'; m.fillRect(-4000, 1004, 10000, 126);
   m.fillStyle = '#26323d'; m.fillRect(-4000, 1450, 10000, 1200);
@@ -366,6 +374,28 @@ function drawMinimap() {
     m.fillStyle = o.wall || o.decor === 'glassWall' ? '#111' : 'rgba(255,255,255,0.35)';
     m.fillRect(o.x, o.y, o.w, o.h);
   }
+  MINIMAP.cache = c; MINIMAP.objects = OBJECTS.length;
+  return c;
+}
+
+function drawMinimap() {
+  const cv = document.getElementById('minimap');
+  if (!cv || cv.offsetParent === null) return;          // hidden (e.g. seated at a game)
+  const now = performance.now();
+  if (now - MINIMAP.last < 33) return;                   // ~30 fps is plenty for a radar
+  MINIMAP.last = now;
+  const size = cv.clientWidth || 160;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  if (cv.width !== size * dpr) { cv.width = size * dpr; cv.height = size * dpr; }
+  const m = cv.getContext('2d');
+  m.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const r = size / 2, sc = 0.13;
+  m.clearRect(0, 0, size, size);
+  m.save();
+  m.beginPath(); m.arc(r, r, r - 2, 0, Math.PI * 2); m.clip();
+  m.fillStyle = '#2e3b2c'; m.fillRect(0, 0, size, size);
+  m.translate(r, r); m.rotate(view.yaw); m.scale(sc, sc); m.translate(-player.x, -player.y);
+  m.drawImage(minimapCache(), MINIMAP.x0, MINIMAP.y0, MINIMAP.w, MINIMAP.h);
   const icon = (x, y, txt, col) => {
     m.save(); m.translate(x, y); m.rotate(-view.yaw); m.scale(1 / sc, 1 / sc);
     m.fillStyle = col; m.beginPath(); m.arc(0, 0, 6.5, 0, Math.PI * 2); m.fill();

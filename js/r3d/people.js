@@ -4,6 +4,7 @@
 // files by tools in /tools.
 import * as THREE from 'three';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // Root speeds measured from the original (root-motion) clips, in m/s
 const CLIP_SPEED = {
@@ -43,7 +44,44 @@ export function decodeAnimLibrary(buffer) {
 // ---------------------------------------------------------------------------
 // Avatar templates
 // ---------------------------------------------------------------------------
+// The converted avatars split each body into 3-15 primitives but only use 2-4
+// materials. Every primitive is its own draw call (twice with shadows), so merge
+// the pieces that share a material and a skeleton. Quantized attributes are
+// expanded to plain arrays first so they can be concatenated.
+const GET = ['getX', 'getY', 'getZ', 'getW'];
+function plainGeometry(g, names) {
+  const out = new THREE.BufferGeometry();
+  for (const n of names) {
+    const a = g.getAttribute(n), size = a.itemSize, count = a.count;
+    const arr = n === 'skinIndex' ? new Uint16Array(count * size) : new Float32Array(count * size);
+    for (let c = 0; c < size; c++) { const get = GET[c]; for (let i = 0; i < count; i++) arr[i * size + c] = a[get](i); }
+    out.setAttribute(n, new THREE.BufferAttribute(arr, size));
+  }
+  const idx = g.index ? g.index.array : Uint32Array.from({ length: g.getAttribute('position').count }, (_, i) => i);
+  out.setIndex(new THREE.BufferAttribute(Uint32Array.from(idx), 1));
+  return out;
+}
+function mergeByMaterial(root) {
+  const groups = new Map();
+  root.traverse(o => {
+    if (!o.isSkinnedMesh || Array.isArray(o.material)) return;
+    const k = o.parent.uuid + '|' + o.material.uuid + '|' + o.skeleton.uuid;
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(o);
+  });
+  for (const list of groups.values()) {
+    if (list.length < 2) continue;
+    const names = Object.keys(list[0].geometry.attributes).filter(n => list.every(m => m.geometry.getAttribute(n)));
+    const merged = mergeGeometries(list.map(m => plainGeometry(m.geometry, names)), false);
+    if (!merged) continue;
+    merged.computeBoundingSphere();
+    list[0].geometry = merged;
+    list.slice(1).forEach(m => m.removeFromParent());
+  }
+}
+
 export function prepareAvatar(scene) {
+  mergeByMaterial(scene);
   scene.traverse(o => {
     if (o.isMesh) {
       o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false;

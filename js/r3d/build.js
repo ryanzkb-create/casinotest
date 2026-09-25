@@ -10,9 +10,51 @@ export const W = v => v * K;
 // ---------------------------------------------------------------------------
 // Static batching: collect meshes, merge per material at the end
 // ---------------------------------------------------------------------------
+// Untextured materials with identical settings are interchangeable; builders often
+// create one per object inside a loop, which would otherwise cost a draw call each.
+const _canon = new Map();
+function canonicalMaterial(m) {
+  if (!m.isMeshStandardMaterial || m.userData.unique || m.map || m.emissiveMap || m.normalMap || m.roughnessMap || m.alphaMap) return m;
+  const key = [m.type, m.color.getHexString(), m.emissive.getHexString(), m.emissiveIntensity, m.roughness, m.metalness, m.transparent, m.opacity,
+    m.side, m.depthWrite, m.envMapIntensity, m.flatShading, m.clearcoat, m.clearcoatRoughness, m.transmission].join('|');
+  if (!_canon.has(key)) _canon.set(key, m);
+  return _canon.get(key);
+}
+
+function plainChildGeometry(geometry) {
+  const g = geometry.index ? geometry.toNonIndexed() : geometry.clone();
+  if (!g.attributes.uv) g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
+  if (!g.attributes.normal) g.computeVertexNormals();
+  for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k);
+  g.clearGroups();
+  return g;
+}
+
+// Merge a group's direct child meshes that share a material (for parts that move
+// together, e.g. a roulette rotor), so each material is one draw call.
+export function mergeChildMeshes(group) {
+  const byMat = new Map();
+  for (const c of [...group.children]) {
+    if (!c.isMesh || Array.isArray(c.material) || c.children.length) continue;
+    c.updateMatrix();
+    const g = plainChildGeometry(c.geometry);
+    g.applyMatrix4(c.matrix);
+    if (!byMat.has(c.material)) byMat.set(c.material, { list: [], shadow: c.castShadow });
+    byMat.get(c.material).list.push(g);
+    group.remove(c);
+  }
+  for (const [material, { list, shadow }] of byMat) {
+    const m = new THREE.Mesh(list.length > 1 ? mergeGeometries(list, false) : list[0], material);
+    m.castShadow = shadow; m.receiveShadow = true;
+    group.add(m);
+  }
+  return group;
+}
+
 export class Batcher {
   constructor() { this.groups = new Map(); }
   add(geometry, material, matrix, opts = {}) {
+    material = canonicalMaterial(material);
     let g = geometry.index ? geometry.toNonIndexed() : geometry.clone();
     if (!g.attributes.uv) g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
     if (!g.attributes.normal) g.computeVertexNormals();
@@ -299,7 +341,8 @@ function slotMachine(o) {
   topper.castShadow = false;
   box(0.82 * s, 0.06, 0.4, MAT.chrome, g, 0, 2.0 * (big ? 1.05 : 1), -0.12);
   if (big) {
-    const wheel = mesh(new THREE.CircleGeometry(0.62, 24), new THREE.MeshStandardMaterial({ color: '#000', emissive: '#ffffff', emissiveMap: wheelFaceTex(), emissiveIntensity: 1.4, map: wheelFaceTex() }), g, 0, 3.55, 0.05);
+    if (!MAT.bigWheel) { const t = wheelFaceTex(); MAT.bigWheel = new THREE.MeshStandardMaterial({ color: '#000', emissive: '#ffffff', emissiveMap: t, emissiveIntensity: 1.4, map: t }); }
+    const wheel = mesh(new THREE.CircleGeometry(0.62, 24), MAT.bigWheel, g, 0, 3.55, 0.05);
     wheel.userData.dynamic = true;
     g.userData.wheel = wheel;
   }
@@ -373,8 +416,10 @@ function cardTable(batch, o, kind) {
   body.rotateX(-Math.PI / 2); body.scale(1, 1, -1);
   mesh(body, MAT.woodDark, g, 0, feltY - 0.1, 0);
   // felt
-  const felt = new THREE.MeshStandardMaterial({ map: TX.feltTex(kind), roughness: 0.95 });
-  mesh(shapeTopGeo(shape, w, d), felt, g, 0, feltY + 0.002, 0);
+  // one printed felt per table type (the texture is large and slow to draw)
+  const fk = 'felt_' + kind;
+  if (!MAT[fk]) MAT[fk] = new THREE.MeshStandardMaterial({ map: TX.feltTex(kind), roughness: 0.95 });
+  mesh(shapeTopGeo(shape, w, d), MAT[fk], g, 0, feltY + 0.002, 0);
   // padded arm rail along the curved edge
   const pts = shape.getPoints(64).filter(p => p.y > -d * 0.44);
   const curve = new THREE.CatmullRomCurve3(pts.map(p => new THREE.Vector3(p.x, feltY + 0.05, -p.y)));
@@ -462,6 +507,7 @@ function rouletteWheel() {
   cyl(0.09, 0.14, 0.06, MAT.gold, rotor, 0, 0.04, 0, 24);
   cyl(0.01, 0.02, 0.14, MAT.chrome, rotor, 0, 0.12, 0, 8);
   for (let i = 0; i < 4; i++) { const arm = box(0.16, 0.012, 0.012, MAT.chrome, rotor, Math.cos(i * 1.57) * 0.07, 0.17, Math.sin(i * 1.57) * 0.07); arm.rotation.y = -i * 1.57; }
+  mergeChildMeshes(rotor);   // 38 frets + turret: a handful of draw calls instead of ~45
   root.add(rotor);
   const ball = new THREE.Mesh(new THREE.SphereGeometry(0.011, 16, 12), new THREE.MeshStandardMaterial({ color: '#fafafa', roughness: 0.15 }));
   ball.position.set(0.4, 0.085, 0);
@@ -532,6 +578,7 @@ function bigSix(batch, o, dyn) {
     peg.rotation.x = Math.PI / 2; peg.position.set(Math.cos(a) * 1.46, Math.sin(a) * 1.46, 0.04);
     wheel.add(peg);
   }
+  mergeChildMeshes(wheel);   // 54 pegs spin with the wheel: one draw call
   wg.add(wheel);
   // clapper at the top
   const clap = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.22, 0.02), new THREE.MeshStandardMaterial({ color: '#d0d0d0', metalness: 0.6, roughness: 0.3 }));

@@ -1,5 +1,6 @@
 // The Strip: casino facade, hotel tower, pylon sign, road, traffic, skyline.
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import * as TX from './tex.js';
 import { MAT, W, K } from './build.js';
 
@@ -43,14 +44,14 @@ export function buildStreet(scene, batch, dyn, models) {
   const white = new THREE.MeshStandardMaterial({ color: '#e8e8e8', roughness: 0.6 });
   for (const z of [CURB_Z + 3.5, CURB_Z + 12.5]) for (let x = -200; x < 290; x += 7) batch.add(dash, white, tf(x, 0.012, z), { noShadow: true });
   // crosswalk in front of the entrance
-  const stripe = new THREE.PlaneGeometry(0.6, ROAD_W - 0.6); stripe.rotateX(-Math.PI / 2);
-  for (let i = 0; i < 9; i++) batch.add(stripe, white, tf(W(850) + 0.4 + i * 0.55, 0.013, CURB_Z + ROAD_W / 2), { noShadow: true });
+  const stripe = new THREE.PlaneGeometry(0.45, ROAD_W - 0.6); stripe.rotateX(-Math.PI / 2);
+  for (let i = 0; i < 7; i++) batch.add(stripe, white, tf(W(850) + 0.3 + i * 0.9, 0.013, CURB_Z + ROAD_W / 2), { noShadow: true });
 
   buildFacade(scene, batch, dyn, FZ);
   buildKiosks(batch, dyn);
 
   // street lights along both curbs
-  let li = 0;
+  let li = 0, lampMat = null;
   for (let x = -60; x < 150; x += 16) {
     for (const [z, side] of [[CURB_Z - 0.5, 1], [CURB_Z + ROAD_W + 0.5, -1]]) {
       if (side === 1 && x > 36 && x < 54) continue; // canopy
@@ -58,11 +59,10 @@ export function buildStreet(scene, batch, dyn, models) {
       mesh(new THREE.CylinderGeometry(0.09, 0.14, 9, 10), MAT.darkMetal, g, 0, 4.5, 0);
       mesh(new THREE.BoxGeometry(0.08, 0.08, 2.2), MAT.darkMetal, g, 0, 8.9, side * 1.1);
       const head = mesh(new THREE.BoxGeometry(0.5, 0.12, 0.9), MAT.darkMetal, g, 0, 8.85, side * 2.1);
-      const lampMat = new THREE.MeshStandardMaterial({ color: '#000', emissive: '#ffe2b0', emissiveIntensity: 0.3 });
+      if (!lampMat) { lampMat = new THREE.MeshStandardMaterial({ color: '#000', emissive: '#ffe2b0', emissiveIntensity: 0.3 }); dyn.nightMats.push({ m: lampMat, day: 0.3, night: 6 }); }
       mesh(new THREE.PlaneGeometry(0.4, 0.8), lampMat, g, 0, 8.78, side * 2.1).rotation.x = Math.PI / 2;
-      dyn.nightMats.push({ m: lampMat, day: 0.3, night: 6 });
       batch.addObject(g);
-      if (li++ % 3 === 0 && x > -20 && x < 110) {
+      if (li++ % 3 === 0 && x > -20 && x < 110 && dyn.streetSpots !== false) {
         const l = new THREE.SpotLight('#ffd8a0', 0, 30, 0.9, 0.6, 1.4);
         l.position.set(x, 8.6, z + side * 2.1);
         l.target.position.set(x, 0, z + side * 2.1);
@@ -355,19 +355,59 @@ function buildCars(scene, dyn, models) {
   let flip = false;
   if (head) { const hb = new THREE.Box3().setFromObject(head); flip = hb.getCenter(new THREE.Vector3()).x < 0; }
   if (flip) src.rotation.y += Math.PI;
+  // Bake the ~30 separate parts of the model into one mesh per material (the car
+  // doesn't animate), so each car is a handful of draw calls.
+  const template = mergeCar(holder);
+  const headLamp = new THREE.MeshStandardMaterial({ color: '#fff', emissive: '#fff6e0', emissiveIntensity: 2 });
+  const tailLamp = new THREE.MeshStandardMaterial({ color: '#400', emissive: '#ff1a1a', emissiveIntensity: 1.5 });
   const paints = ['#b3121f', '#f2c14e', '#101014', '#e8e8e8', '#1f4ea0', '#6a6a70', '#0f6a4a', '#d06a1a', '#5a1a7a'];
   dyn.cars = [];
   for (let i = 0; i < 9; i++) {
-    const car = holder.clone(true);
+    const car = template.clone(true);
     const paint = new THREE.MeshPhysicalMaterial({ color: paints[i % paints.length], metalness: 0.6, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.18 });
     car.traverse(o => {
       if (!o.isMesh) return;
       o.castShadow = true; o.receiveShadow = true;
-      if (o.material && /Body_Color|body/i.test(o.material.name + o.name)) o.material = paint;
-      if (/^lights$/.test(o.name)) o.material = new THREE.MeshStandardMaterial({ color: '#fff', emissive: '#fff6e0', emissiveIntensity: 2 });
-      if (/lights_red/.test(o.name)) o.material = new THREE.MeshStandardMaterial({ color: '#400', emissive: '#ff1a1a', emissiveIntensity: 1.5 });
+      o.material = { paint, head: headLamp, tail: tailLamp }[o.userData.role] || o.material;
     });
     scene.add(car);
     dyn.cars.push(car);
   }
+}
+
+const GET = ['getX', 'getY', 'getZ', 'getW'];
+function mergeCar(root) {
+  root.updateMatrixWorld(true);
+  const inv = root.matrixWorld.clone().invert();
+  const groups = new Map();
+  root.traverse(o => {
+    if (!o.isMesh || Array.isArray(o.material)) return;
+    const role = /^lights$/.test(o.name) ? 'head' : /lights_red/.test(o.name) ? 'tail' : /Body_Color|body/i.test(o.material.name + o.name) ? 'paint' : '';
+    const key = o.material.uuid + '|' + role;
+    if (!groups.has(key)) groups.set(key, { material: o.material, role, list: [] });
+    groups.get(key).list.push(o);
+  });
+  const out = new THREE.Group();
+  for (const { material, role, list } of groups.values()) {
+    const names = ['position', 'normal', 'uv'].filter(n => list.every(o => o.geometry.getAttribute(n)));
+    const geos = list.map(o => {
+      const src = o.geometry, g = new THREE.BufferGeometry();
+      for (const n of names) {   // expand quantized attributes to floats before transforming
+        const a = src.getAttribute(n), arr = new Float32Array(a.count * a.itemSize);
+        for (let c = 0; c < a.itemSize; c++) for (let i = 0; i < a.count; i++) arr[i * a.itemSize + c] = a[GET[c]](i);
+        g.setAttribute(n, new THREE.BufferAttribute(arr, a.itemSize));
+      }
+      const count = src.getAttribute('position').count;
+      g.setIndex(new THREE.BufferAttribute(src.index ? Uint32Array.from(src.index.array) : Uint32Array.from({ length: count }, (_, i) => i), 1));
+      g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld));
+      return g;
+    });
+    const merged = geos.length > 1 ? mergeGeometries(geos, false) : geos[0];
+    if (!merged) continue;
+    merged.computeBoundingSphere();
+    const m = new THREE.Mesh(merged, material);
+    m.userData.role = role;
+    out.add(m);
+  }
+  return out;
 }

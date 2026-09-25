@@ -19,8 +19,24 @@ import { TableFX } from './tablefx.js';
 
 const canvas = document.getElementById('game3d');
 const MOBILE = matchMedia('(pointer: coarse)').matches || Math.min(innerWidth, innerHeight) < 600;
-const QUALITY = { level: MOBILE ? 1 : 2 }; // 0 low, 1 medium, 2 high
-{ const q = new URLSearchParams(location.search).get('q'); if (q !== null && q !== '') QUALITY.level = +q; }
+// Safari's WebGL (on Metal) is noticeably slower than Chrome's, especially at retina resolution
+const SAFARI = /^((?!chrome|chromium|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent);
+// Graphics presets: 0 low, 1 medium, 2 high. "auto" picks medium on desktop and low on phones;
+// the player can override it in Settings (stored by js/world.js) and ?q= forces a level for testing.
+const PRESETS = [
+  { pr: 1, shadows: 0, lights: 3, spots: false, gtao: false, smaa: false, dyn: 0.15, crowd: { maxDist: 30, shadowDist: 0 } },
+  { pr: SAFARI ? 1 : 1.25, shadows: 1024, lights: 7, spots: true, gtao: false, smaa: true, dyn: 0.1, crowd: { maxDist: 40, shadowDist: 10 } },
+  { pr: 1.5, shadows: 2048, lights: 12, spots: true, gtao: true, smaa: true, dyn: 0.08, crowd: { maxDist: 55, shadowDist: 16 } },
+];
+const QUALITY = (() => {
+  const pref = typeof SETTINGS !== 'undefined' ? SETTINGS.quality : 'auto';
+  let level = pref === 'auto' || pref === undefined ? (MOBILE ? 0 : 1) : +pref;
+  const q = new URLSearchParams(location.search).get('q');
+  const forced = q !== null && q !== '';
+  if (forced) level = +q;
+  level = Math.max(0, Math.min(2, level || 0));
+  return { level, forced, safari: SAFARI, ...PRESETS[level], crowd: { ...PRESETS[level].crowd } };
+})();
 
 let renderer, scene, camera, composer, bloom, gtao, smaa, gradePass;
 let sun, hemi, sky, stars, envInterior, envExterior, envNight;
@@ -108,9 +124,10 @@ function parseHDR(buffer, pmrem, scale = 1) {
 // ---------------------------------------------------------------------------
 async function init() {
   renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', stencil: false });
-  renderer.setPixelRatio(QUALITY.level === 0 ? 1 : Math.min(devicePixelRatio, MOBILE ? 1.5 : 1.75));
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.setPixelRatio(Math.min(devicePixelRatio, QUALITY.pr));
+  renderer.shadowMap.enabled = QUALITY.shadows > 0;
+  renderer.shadowMap.type = QUALITY.level >= 2 ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
+  renderer.shadowMap.autoUpdate = false;   // refreshed from render(), every frame or every few frames
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.2;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -148,13 +165,16 @@ async function init() {
   scene.add(hemi);
   sun = new THREE.DirectionalLight('#fff0d8', 2.5);
   sun.castShadow = true;
-  const ss = QUALITY.level >= 2 ? 2048 : 1024;
+  const ss = QUALITY.shadows || 1024;
   sun.shadow.mapSize.set(ss, ss);
   const sc = sun.shadow.camera; sc.left = -22; sc.right = 22; sc.top = 22; sc.bottom = -22; sc.near = 1; sc.far = 140;
   sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03;
   scene.add(sun, sun.target);
   // interior accent lights (colourful casino glow + warm pools over the tables)
-  for (const [x, z, c, i] of [[9, 8, '#ff3db0', 30], [20, 20, '#3dc8ff', 30], [31, 30, '#ffb03d', 30], [9, 30, '#b36bff', 30], [52, 9, '#ffd9a0', 45], [60, 24, '#ffd9a0', 45], [75, 10, '#ffcf8a', 40], [20, 46, '#3de0ff', 35], [80, 43, '#ffb070', 35], [85, 31, '#ffe0b0', 35], [45, 25, '#ffe0b0', 30], [8, 44, '#ffd070', 30]]) {
+  // every light is evaluated for every lit pixel, so lower presets keep only the most important
+  const accents = [[52, 9, '#ffd9a0', 45], [60, 24, '#ffd9a0', 45], [20, 20, '#3dc8ff', 30], [75, 10, '#ffcf8a', 40], [20, 46, '#3de0ff', 35], [80, 43, '#ffb070', 35], [9, 8, '#ff3db0', 30],
+    [31, 30, '#ffb03d', 30], [9, 30, '#b36bff', 30], [85, 31, '#ffe0b0', 35], [45, 25, '#ffe0b0', 30], [8, 44, '#ffd070', 30]];
+  for (const [x, z, c, i] of accents.slice(0, QUALITY.lights)) {
     const l = new THREE.PointLight(c, i * 0.22, 18, 2);
     l.position.set(x, 4.6, z);
     scene.add(l);
@@ -162,22 +182,22 @@ async function init() {
 
   // world
   initMaterials();
-  const models = {};
-  try { models.sofa = (await parseGLB(assets.sofa)).scene; } catch (e) { console.warn(e); }
-  try { models.chair = (await parseGLB(assets.chair)).scene; } catch (e) { console.warn(e); }
-  try { models.car = (await parseGLB(assets.car)).scene; } catch (e) { console.warn(e); }
+  // decode every model in parallel (texture decoding runs off the main thread)
+  const parseOr = (buf, label) => parseGLB(buf).then(g => g.scene, e => { console.warn(label, e); return null; });
+  const avatarJobs = AVATAR_FILES.map(f => parseOr(assets['p:' + f], 'avatar ' + f));
+  const [sofa, chair, car] = await Promise.all([parseOr(assets.sofa, 'sofa'), parseOr(assets.chair, 'chair'), parseOr(assets.car, 'car')]);
+  const models = { sofa, chair, car };
   const batch = new Batcher();
   buildShell(scene, batch, dyn);
   buildProps(scene, batch, dyn, models);
+  dyn.streetSpots = QUALITY.spots;
   buildStreet(scene, batch, dyn, models);
   batch.build(scene);
 
   // people
   const lib = decodeAnimLibrary(assets.anims);
   const templates = {};
-  for (const f of AVATAR_FILES) {
-    try { templates[f] = prepareAvatar((await parseGLB(assets['p:' + f])).scene); } catch (e) { console.warn('avatar', f, e); }
-  }
+  (await Promise.all(avatarJobs)).forEach((sc, i) => { if (sc) templates[AVATAR_FILES[i]] = prepareAvatar(sc); });
   crowd = new Crowd(scene, templates, lib);
   tables = new TableFX(scene, crowd);
 
@@ -194,7 +214,7 @@ async function init() {
 function setupPost() {
   composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  if (QUALITY.level >= 2) {
+  if (QUALITY.gtao) {
     gtao = new GTAOPass(scene, camera, innerWidth, innerHeight);
     gtao.output = GTAOPass.OUTPUT.Default;
     gtao.blendIntensity = 0.85;
@@ -216,7 +236,8 @@ function setupPost() {
         gl_FragColor = vec4(col, c.a); }`,
   });
   composer.addPass(gradePass);
-  if (QUALITY.level >= 1) { smaa = new SMAAPass(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio()); composer.addPass(smaa); }
+  // retina screens are sharp enough without SMAA's three extra full-screen passes
+  if (QUALITY.smaa && renderer.getPixelRatio() < 1.4) { smaa = new SMAAPass(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio()); composer.addPass(smaa); }
 }
 
 // ---------------------------------------------------------------------------
@@ -228,7 +249,8 @@ function buildFX() {
     const m = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 1, 4, 1, true), new THREE.MeshBasicMaterial({ color: '#ffe8a0', transparent: true, opacity: 0.9 }));
     m.visible = false; scene.add(m); tracers.push(m);
   }
-  muzzle = new THREE.PointLight('#ffb050', 0, 6, 2);
+  // a real light only on High: every light adds shader work to every pixel all the time
+  muzzle = QUALITY.level >= 2 ? new THREE.PointLight('#ffb050', 0, 6, 2) : new THREE.Object3D();
   scene.add(muzzle);
   const flash = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), new THREE.MeshBasicMaterial({ color: '#fff0b0' }));
   flash.visible = false; scene.add(flash); muzzle.userData.flash = flash;
@@ -374,24 +396,35 @@ function render(time) {
   clock.last = t; clock.t += dt;
 
   updateEnvironment(dt);
-  const everyone = [player, ...npcs];
-  crowd.update(dt, everyone, cam.pos);
-  tables.update(dt, t);
   updateCamera(dt);
+  camera.updateMatrixWorld();
+  crowd.update(dt, [player, ...npcs], camera, QUALITY.crowd);
+  tables.update(dt, t);
   updateDynamic(dt, t);
   updateFX();
   gradePass.uniforms.uHurt.value = Math.max(0, 1 - (S.health || 100) / 40) * 0.6;
+  renderer.shadowMap.needsUpdate = renderer.shadowMap.enabled && (frameN++ % shadowEvery === 0);
   composer.render(dt);
   updateBubbles();
 
-  // adaptive quality
+  // adaptive quality: step down one notch at a time while the frame rate is low
   fpsAcc += dt; fpsN++;
-  if (fpsAcc > 3) {
+  if (fpsAcc > 2) {
     const fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0;
-    if (fps < 38 && gtao && gtao.enabled) { gtao.enabled = false; }
-    else if (fps < 30 && renderer.getPixelRatio() > 1) { renderer.setPixelRatio(1); resize(); }
-    else if (fps < 24 && bloom.enabled) { bloom.enabled = false; }
+    if (fps < 42 && !QUALITY.forced) degrade(fps);
   }
+}
+
+let shadowEvery = QUALITY.level >= 2 ? 1 : 2, frameN = 0;
+function degrade(fps) {
+  const pr = renderer.getPixelRatio();
+  if (gtao && gtao.enabled) gtao.enabled = false;
+  else if (pr > 1) { renderer.setPixelRatio(1); resize(); }
+  else if (smaa && smaa.enabled && fps < 36) smaa.enabled = false;
+  else if (QUALITY.crowd.maxDist > 30 && fps < 34) { QUALITY.crowd.maxDist = 30; QUALITY.crowd.shadowDist = 6; }
+  else if (renderer.shadowMap.enabled && shadowEvery < 4 && fps < 32) shadowEvery = 4;
+  else if (bloom.enabled && fps < 28) bloom.enabled = false;
+  else if (pr > 0.75 && fps < 24) { renderer.setPixelRatio(0.75); resize(); }
 }
 
 // Speech bubbles: HTML labels pinned above heads
@@ -436,7 +469,7 @@ function updateDynamic(dt, t) {
     const active = s.update(dt);
     if (s.spinning && !active) { s.spinning = false; s.message = Math.random() < 0.3 ? 'WINNER!' : 'PLAY ' + s.theme.toUpperCase(); if (s.message === 'WINNER!') s.flash = 1.5; }
   }
-  if (dynT > 0.08) {
+  if (dynT > QUALITY.dyn) {
     // only redraw (and re-upload) screens that are close enough to read
     const cp = camera.position;
     if (cp.x < 52 && cp.z < 50) for (const sm of Object.values(sms)) sm.screen.draw();
@@ -455,13 +488,15 @@ function updateDynamic(dt, t) {
     lamps[2].emissiveIntensity = phase >= 0.55 ? 3 : 0.1;
   }
   // traffic
+  // from deep inside the casino the street is behind walls: skip drawing the traffic
+  const carsVisible = camera.position.z > W(CASINO_BOTTOM) - 14;
   if (dyn.cars) cars.forEach((c, i) => {
     const car = dyn.cars[i % dyn.cars.length];
     if (!car) return;
     const lane = c.lane % 4;
     car.position.set(W(c.x), 0, LANE_Z[lane]);
     car.rotation.y = lane < 2 ? Math.PI : 0;
-    car.visible = true;
+    car.visible = carsVisible;
   });
 }
 
@@ -473,7 +508,7 @@ function resize() {
   renderer.setSize(innerWidth, innerHeight, false);
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
-  if (composer) composer.setSize(innerWidth, innerHeight);
+  if (composer) { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(innerWidth, innerHeight); }
 }
 
 // Which hostile is under (or closest to) the crosshair?

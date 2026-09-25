@@ -24,6 +24,7 @@ export const AVATAR_FILES = [...new Set(Object.values(AVATARS).flat().map(a => a
 
 const SIT_IDLES = { m: ['sit_table_idle_neutral_01', 'sit_table_idle_nervous_01', 'sit_table_gestic_thoughtful', 'sit_table_breathe_01'], f: ['sit_table_idle_neutral_01', 'sit_table_gestic_thoughtful', 'sit_table_breathe_01'] };
 const STAND_IDLES = ['idle_neutral_01', 'idle_neutral_02', 'idle_look_around_01', 'idle_waiting_01'];
+const _pv = new THREE.Matrix4(), _frustum = new THREE.Frustum(), _sphere = new THREE.Sphere(new THREE.Vector3(), 1.6);
 
 export class Crowd {
   constructor(scene, templates, lib) {
@@ -57,25 +58,34 @@ export class Crowd {
     const h = new Human(tpl, g, this.lib, { idle, shades: e.role === 'thug', scale: e.role === 'guard' ? 1.03 : 0.97 + Math.random() * 0.06 });
     h.root.traverse(o => { o.userData.entity = e; });
     this.scene.add(h.root);
-    r = { h, e, lastX: e.x, lastY: e.y, speed: 0, activityT: Math.random() * 10 };
+    r = { h, e, lastX: e.x, lastY: e.y, speed: 0, activityT: Math.random() * 10, phase: Math.floor(Math.random() * 4) };
     this.rigs.set(e, r);
     return r;
   }
 
-  update(dt, list, camPos) {
+  // Per frame: place every rig, but only animate and draw the ones the camera
+  // can actually see. Distant people animate at a lower rate and only people
+  // near the camera cast shadows (the big costs on slower GPUs and Safari).
+  update(dt, list, camera, opts = {}) {
     const seen = new Set();
+    const maxDist = opts.maxDist || 45, shadowDist = opts.shadowDist ?? 14;
+    _pv.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    _frustum.setFromProjectionMatrix(_pv);
+    const cx = camera.position.x, cz = camera.position.z;
+    this.frame = (this.frame || 0) + 1;
     for (const e of list) {
       seen.add(e);
       const r = this.rigFor(e);
       if (!r) continue;
       const h = r.h;
-      // hide far-away people entirely (performance)
       const px = W(e.x), pz = W(e.y);
-      const far = camPos && Math.hypot(px - camPos.x, pz - camPos.z) > 60;
-      h.root.visible = !far;
+      const dist = Math.hypot(px - cx, pz - cz);
+      _sphere.center.set(px, 1, pz);
+      const visible = e === player || (dist < maxDist && _frustum.intersectsSphere(_sphere));
+      h.root.visible = visible;
       // speed from actual movement (map units → metres)
-      const dist = Math.hypot(e.x - r.lastX, e.y - r.lastY) * 0.05;
-      const inst = dt > 0 ? dist / dt : 0;
+      const moved = Math.hypot(e.x - r.lastX, e.y - r.lastY) * 0.05;
+      const inst = dt > 0 ? moved / dt : 0;
       r.speed += (Math.min(inst, 9) - r.speed) * Math.min(1, dt * 10);
       r.lastX = e.x; r.lastY = e.y;
       h.root.position.set(px, e.seatY || 0, pz);
@@ -84,9 +94,16 @@ export class Crowd {
       let cur = h.root.rotation.y;
       let d = ((want - cur + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
       h.root.rotation.y = cur + d * Math.min(1, dt * 12);
-      if (far) continue;
-      this.animate(r, e, dt);
-      h.update(dt);
+      if (!visible) { r.acc = (r.acc || 0) + dt; continue; }
+      const shadow = dist < shadowDist || e === player;
+      if (shadow !== r.shadow) { r.shadow = shadow; h.root.traverse(o => { if (o.isMesh) o.castShadow = shadow; }); }
+      // animation level of detail: every frame close up, every 2nd/4th frame further away
+      r.acc = (r.acc || 0) + dt;
+      const step = dist < 12 || e === player ? 1 : dist < 25 ? 2 : 4;
+      if ((this.frame + r.phase) % step !== 0) continue;
+      this.animate(r, e, r.acc);
+      h.update(Math.min(r.acc, 0.25));
+      r.acc = 0;
     }
     for (const [e, r] of this.rigs) {
       if (!seen.has(e)) { this.scene.remove(r.h.root); this.rigs.delete(e); }

@@ -24,6 +24,8 @@ The game is rendered in 3D with [Three.js](https://threejs.org) (loaded from the
 | Phone | `P` | 📱 button |
 | Close window / stand up from a game | `Esc` | ✕ / Leave |
 
+**Settings** (on the start screen, or the **?** button in game): look speed for mouse and touch, and a graphics preset. *Auto* picks Medium on computers and Low on phones; if the game stutters (Safari on a retina Mac is the most demanding case), choose **Low**. The game also steps its quality down by itself when the frame rate drops.
+
 ### Playing the casino games
 Walk up to a slot machine or table and press `E` to sit down. The camera moves to your seat and the game is played in 3D: the dealer deals real cards, chips stack up on the felt, the roulette ball drops into a pocket, dice bounce across the craps table and the Big Six wheel clicks to a stop. The first time you sit at each game a short **tutorial** explains the rules, the payouts and the real house edge. Press `T` at any time to see it again.
 
