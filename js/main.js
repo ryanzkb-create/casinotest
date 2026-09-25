@@ -148,6 +148,8 @@ function frame(t) {
     advanceTime(dt * CONFIG.MIN_PER_SEC);
     afterAction();
   }
+  // free the mouse whenever the phone, a dialog, a menu or a table game is open
+  if (document.pointerLockElement && blocked()) document.exitPointerLock();
   render(t);
   updateHUD();
   requestAnimationFrame(frame);
