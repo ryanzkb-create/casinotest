@@ -26,7 +26,7 @@ function closePhone() {
   if (!phoneOpen) return;
   phoneOpen = false;
   $('#phone').classList.add('hidden');
-  if (typeof relockMouse === 'function') relockMouse();   // back to mouse look, like GTA
+  if (typeof relockMouse === 'function') setTimeout(relockMouse, 0);   // back to mouse look, like GTA
 }
 
 function showApp(id) {

@@ -1,0 +1,49 @@
+{
+  "name": "golden-mirage",
+  "productName": "Golden Mirage",
+  "version": "1.0.0",
+  "description": "A 3D Las Vegas casino life simulator that shows why gambling always loses money.",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "game": "cd .. && python3 tools/build_single.py --app desktop/game",
+    "start": "npm run game && electron .",
+    "dist": "npm run game && electron-builder --mac --publish never"
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
+    "esbuild": "^0.24.2",
+    "three": "0.160.0"
+  },
+  "build": {
+    "appId": "com.goldenmirage.game",
+    "productName": "Golden Mirage",
+    "files": [
+      "main.js",
+      "preload.js",
+      "game/**/*"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "mac": {
+      "category": "public.app-category.simulation-games",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "identity": "-",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "title": "Golden Mirage"
+    }
+  }
+}

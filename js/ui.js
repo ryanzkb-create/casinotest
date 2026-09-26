@@ -46,6 +46,8 @@ function closeModal(force = false) {
   $('#modal-close').classList.remove('hidden');
   modalOpen = false;
   modalOnClose = null;
+  // back to mouse look unless something else opened straight away
+  if (typeof relockMouse === 'function') setTimeout(relockMouse, 0);
 }
 
 // Simple info dialog with action buttons: [{label, cls, fn}]

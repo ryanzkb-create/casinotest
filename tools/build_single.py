@@ -10,6 +10,10 @@
            drops the <!DOCTYPE>/<html>/<head>/<body> wrappers for hosts that
            add their own page skeleton; --text-assets writes each asset as
            base64 text (NAME.b64.txt) for hosts that only serve text files.
+    python3 tools/build_single.py --app OUT_DIR
+        -> OUT_DIR/index.html + OUT_DIR/assets/ for the Mac app (desktop/):
+           Three.js is bundled in too (from desktop/node_modules), so the app
+           needs no internet connection.
 
 The 3D engine (js/r3d/*.js) is bundled with esbuild, which is run through npx
 if it isn't installed. Three.js itself stays on the jsDelivr CDN (import map).
@@ -26,23 +30,27 @@ MODULE = '<script type="module" src="js/r3d/main.js"></script>'
 
 
 def esbuild_cmd():
-    local = ROOT / "node_modules" / ".bin" / "esbuild"
-    if local.exists():
-        return [str(local)]
+    for local in (ROOT / "node_modules" / ".bin" / "esbuild", ROOT / "desktop" / "node_modules" / ".bin" / "esbuild"):
+        if local.exists():
+            return [str(local)]
     if shutil.which("esbuild"):
         return ["esbuild"]
     return ["npx", "--yes", "esbuild@0.24.2"]
 
 
-def bundle_engine() -> str:
-    out = subprocess.run(
-        esbuild_cmd() + ["js/r3d/main.js", "--bundle", "--format=esm", "--target=es2020",
-                         "--external:three", "--external:three/addons/*", "--log-level=warning"],
-        cwd=ROOT, check=True, capture_output=True, text=True)
+def bundle_engine(with_three=False) -> str:
+    args = ["js/r3d/main.js", "--bundle", "--format=esm", "--target=es2020", "--log-level=warning"]
+    env = None
+    if with_three:
+        import os
+        env = dict(os.environ, NODE_PATH=str(ROOT / "desktop" / "node_modules"))
+    else:
+        args += ["--external:three", "--external:three/addons/*"]
+    out = subprocess.run(esbuild_cmd() + args, cwd=ROOT, check=True, capture_output=True, text=True, env=env)
     return out.stdout
 
 
-def inline(html: str) -> str:
+def inline(html: str, with_three=False) -> str:
     def css(m):
         return "<style>\n" + (ROOT / m.group(1)).read_text() + "\n</style>"
 
@@ -54,7 +62,9 @@ def inline(html: str) -> str:
 
     html = re.sub(r'<link rel="stylesheet" href="(css/[^"]+)">', css, html)
     assert MODULE in html, "3D engine module tag not found in index.html"
-    engine = bundle_engine()
+    engine = bundle_engine(with_three)
+    if with_three:  # everything is bundled: drop the CDN import map
+        html = re.sub(r'\s*<script type="importmap">.*?</script>', "", html, flags=re.S)
     assert "</script" not in engine
     html = html.replace(MODULE, f'<script type="module">\n{engine}\n</script>')
     html = re.sub(r'<script([^>]*?) src="(js/[^"]+)"></script>', js, html)
@@ -84,6 +94,16 @@ def fragment(html: str) -> str:
 
 
 def main():
+    if len(sys.argv) > 2 and sys.argv[1] == "--app":
+        out_dir = Path(sys.argv[2])
+        if out_dir.exists():
+            shutil.rmtree(out_dir)
+        (out_dir / "assets").mkdir(parents=True)
+        out = out_dir / "index.html"
+        out.write_text(inline((ROOT / "index.html").read_text(), with_three=True))
+        shutil.copytree(ROOT / "assets", out_dir / "assets", dirs_exist_ok=True)
+        print(f"wrote {out} ({out.stat().st_size // 1024} KB)")
+        return
     html = inline((ROOT / "index.html").read_text())
     if len(sys.argv) > 2 and sys.argv[1] == "--web":
         out_dir = Path(sys.argv[2])

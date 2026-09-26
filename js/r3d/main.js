@@ -26,11 +26,14 @@ const SAFARI = /^((?!chrome|chromium|android|crios|fxios|edg).)*safari/i.test(na
 const PRESETS = [
   { pr: 1, shadows: 0, lights: 3, spots: false, gtao: false, smaa: false, dyn: 0.15, crowd: { maxDist: 30, shadowDist: 0 } },
   { pr: SAFARI ? 1 : 1.25, shadows: 1024, lights: 7, spots: true, gtao: false, smaa: true, dyn: 0.1, crowd: { maxDist: 40, shadowDist: 10 } },
-  { pr: 1.5, shadows: 2048, lights: 12, spots: true, gtao: true, smaa: true, dyn: 0.08, crowd: { maxDist: 55, shadowDist: 16 } },
+  { pr: 1.5, shadows: 2048, lights: 12, spots: true, gtao: true, smaa: false, msaa: 4, dyn: 0.08, crowd: { maxDist: 55, shadowDist: 16 } },
 ];
+// The Mac app (desktop/) runs Chrome's GPU pipeline on a known machine: High at full retina resolution
+const APP = !!(window.desktop && window.desktop.isApp);
+if (APP) PRESETS[2].pr = 2;
 const QUALITY = (() => {
   const pref = typeof SETTINGS !== 'undefined' ? SETTINGS.quality : 'auto';
-  let level = pref === 'auto' || pref === undefined ? (MOBILE ? 0 : 1) : +pref;
+  let level = pref === 'auto' || pref === undefined ? (APP ? 2 : MOBILE ? 0 : 1) : +pref;
   const q = new URLSearchParams(location.search).get('q');
   const forced = q !== null && q !== '';
   if (forced) level = +q;
@@ -131,7 +134,7 @@ async function init() {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.2;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  TX.MAX_ANISO.v = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  TX.MAX_ANISO.v = Math.min(QUALITY.level >= 2 ? 16 : 8, renderer.capabilities.getMaxAnisotropy());
 
   const progress = p => { if (window.onRender3DProgress) window.onRender3DProgress(p); };
   const assets = await loadAll(progress);
@@ -212,7 +215,10 @@ async function init() {
 }
 
 function setupPost() {
-  composer = new EffectComposer(renderer);
+  // High: hardware multisampling (crisp edges on geometry and people) instead of SMAA
+  composer = QUALITY.msaa
+    ? new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio(), { type: THREE.HalfFloatType, samples: QUALITY.msaa }))
+    : new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
   if (QUALITY.gtao) {
     gtao = new GTAOPass(scene, camera, innerWidth, innerHeight);
@@ -419,6 +425,7 @@ let shadowEvery = QUALITY.level >= 2 ? 1 : 2, frameN = 0;
 function degrade(fps) {
   const pr = renderer.getPixelRatio();
   if (gtao && gtao.enabled) gtao.enabled = false;
+  else if (pr > 1.5) { renderer.setPixelRatio(1.5); resize(); }
   else if (pr > 1) { renderer.setPixelRatio(1); resize(); }
   else if (smaa && smaa.enabled && fps < 36) smaa.enabled = false;
   else if (QUALITY.crowd.maxDist > 30 && fps < 34) { QUALITY.crowd.maxDist = 30; QUALITY.crowd.shadowDist = 6; }

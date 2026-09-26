@@ -145,6 +145,8 @@ let mouseWasLocked = false;
 function relockMouse() {
   if (!mouseWasLocked || blocked()) return;
   mouseWasLocked = false;
+  // the Mac app can re-lock at any time (even after Esc); browsers only inside a click or key press, never Esc
+  if (window.desktop && window.desktop.relockMouse) { window.desktop.relockMouse(); return; }
   const cv = document.getElementById('game3d');
   try { const p = cv.requestPointerLock && cv.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* needs a click instead */ }
 }

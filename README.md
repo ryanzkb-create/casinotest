@@ -13,6 +13,13 @@ The game is rendered in 3D with [Three.js](https://threejs.org) (loaded from the
 - **From source:** browsers block ES modules and `fetch` on `file://`, so serve the folder first, e.g. `python3 -m http.server`, then open http://localhost:8000. If the 3D renderer can't load, the game falls back to a simple 2D top-down view.
 - **Rebuild** after changing the source: `python3 tools/build_single.py` (needs Node.js, since it runs esbuild through `npx`). `python3 tools/build_single.py --web OUT_DIR` writes a lighter page plus an `assets/` folder for web hosting (add `--text-assets` for hosts that only serve text files, and `--fragment` for hosts that wrap the page in their own `<html>` skeleton).
 
+### Mac app (recommended on a Mac)
+The `desktop/` folder wraps the game in its own Mac app (Electron, not the App Store). It plays better than a browser tab: it runs at full retina resolution on the **High** preset with multisample anti-aliasing and ambient occlusion, works offline, and **Esc** can close the phone and go straight back to mouse look (browsers never allow that).
+
+- **Download:** on GitHub open **Actions → Mac app**, pick the latest successful run and download `golden-mirage-mac` under *Artifacts*. Unzip it and open the `.dmg` for your Mac (`arm64` for Apple Silicon M1–M4, `x64` for Intel), then drag Golden Mirage into Applications.
+- **First launch:** the app isn't notarised by Apple, so macOS blocks it the first time. Right-click the app and choose **Open**, or go to **System Settings → Privacy & Security** and click **Open Anyway**. If macOS says the app is damaged, run `xattr -cr "/Applications/Golden Mirage.app"` in Terminal once.
+- **Build it yourself** (needs Node.js 20+ and Python 3): `cd desktop && npm install && npm start` to run it, or `npm run dist` to make the `.dmg` files in `desktop/dist/`.
+
 | Action | Keyboard / mouse | Touch |
 | --- | --- | --- |
 | Look around | Click the game to capture the mouse, then move it | Drag with your right thumb |
@@ -24,7 +31,7 @@ The game is rendered in 3D with [Three.js](https://threejs.org) (loaded from the
 | Phone | `P` | 📱 button |
 | Close window / stand up from a game | `Esc` | ✕ / Leave |
 
-**Settings** (on the start screen, or the **?** button in game): look speed for mouse and touch, and a graphics preset. *Auto* picks Medium on computers and Low on phones; if the game stutters (Safari on a retina Mac is the most demanding case), choose **Low**. The game also steps its quality down by itself when the frame rate drops.
+**Settings** (on the start screen, or the **?** button in game): look speed for mouse and touch, and a graphics preset. *Auto* picks High in the Mac app, Medium in browsers on computers and Low on phones; if the game stutters (Safari on a retina Mac is the most demanding case), choose **Low**. The game also steps its quality down by itself when the frame rate drops.
 
 ### Playing the casino games
 Walk up to a slot machine or table and press `E` to sit down. The camera moves to your seat and the game is played in 3D: the dealer deals real cards, chips stack up on the felt, the roulette ball drops into a pocket, dice bounce across the craps table and the Big Six wheel clicks to a stop. The first time you sit at each game a short **tutorial** explains the rules, the payouts and the real house edge. Press `T` at any time to see it again.
