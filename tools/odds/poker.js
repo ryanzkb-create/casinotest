@@ -3,8 +3,10 @@
 // Run: node tools/odds/poker.js [hands]
 const O = require('../../js/odds2.js');
 const N = +process.argv[2] || 1_000_000;
+const ONLY = process.argv[3] || 'all';   // 'vp', 'tcp' or 'all'
 const pct = x => (x * 100).toFixed(2) + '%';
 
+if (ONLY !== 'tcp') {
 console.log(`== VIDEO POKER, Jacks or Better, ${N.toLocaleString()} hands, in-game hold advice (approximate strategy) ==`);
 for (const table of ['9/6', '8/5', '6/5']) {
   let tot = 0; const counts = {};
@@ -14,7 +16,8 @@ for (const table of ['9/6', '8/5', '6/5']) {
 }
 // sanity: holding nothing back ("draw five") is much worse
 { let tot = 0; for (let i = 0; i < N / 5; i++) tot += O.vpPlay('8/5', () => [false, false, false, false, false]).mult; console.log(`8/5 discarding everything every time: RTP ${pct(tot / (N / 5))}`); }
-
+}
+if (ONLY !== 'vp') {
 console.log('\n== THREE CARD POKER ==');
 console.log(`Pair Plus: exact RTP by enumerating all 22,100 hands = ${pct(O.tcpPairPlusRTP())} → house edge ${pct(1 - O.tcpPairPlusRTP())} (published ${pct(O.TCP_EDGE.pairPlus)})`);
 {
@@ -27,4 +30,5 @@ console.log(`Pair Plus: exact RTP by enumerating all 22,100 hands = ${pct(O.tcpP
   console.log(`Ante/Play (raise with Q-6-4+): net loss per ante ${pct((stakeAll - ret) / stakeAnte)} (published ${pct(O.TCP_EDGE.ante)}); per unit wagered ${pct((stakeAll - ret) / stakeAll)}; raised ${pct(played / N)} of hands`);
   let pp = 0; for (let i = 0; i < N; i++) { const p = O.shuffled().slice(0, 3); const m = O.TCP_PP[O.tcpEval(p).cat]; pp += m ? m + 1 : 0; }
   console.log(`Pair Plus Monte-Carlo edge ${pct(1 - pp / N)}`);
+}
 }
