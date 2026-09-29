@@ -20,6 +20,7 @@ const ZONES = [
   { x: M(70), y: M(38), w: M(19.5), h: M(11.5), color: '#4a2a10', label: 'FOOD COURT', floor: 'tiles' },
   { x: M(75), y: M(19), w: M(14.5), h: M(16.5), color: '#333642', label: 'HOTEL LOBBY', floor: 'marble' },
   { x: M(0.5), y: M(38), w: M(15.5), h: M(11.5), color: '#2a2034', label: 'CASHIER & LOUNGE', floor: 'carpetBlue' },
+  { x: M(49.5), y: M(39.5), w: M(19.5), h: M(10), color: '#141a3a', label: 'SPORTSBOOK & KENO LOUNGE', floor: 'carpetBlue' },
   // marble walkways
   { x: M(41.5), y: 0, w: M(7), h: M(49.5), color: '#6a6258', floor: 'marble', walkway: true },
   { x: 0, y: M(36), w: M(90), h: M(3.5), color: '#6a6258', floor: 'marble', walkway: true },
@@ -57,7 +58,10 @@ function staffSpot(o) {
   }
 }
 
+// Single-seat machine games added in js/games2.js (video poker, keno, race book, scratch cards)
+const MACHINE_TYPES = ['videopoker', 'keno', 'racebook', 'lottery'];
 function tableSeats(o) {
+  if (MACHINE_TYPES.includes(o.type)) return [seatOf(o)];
   const n = o.type === 'bigsix' ? 0 : o.type === 'craps' ? 5 : o.type === 'roulette' ? 4 : o.type.startsWith('baccarat') ? 5 : 5;
   const out = [];
   for (let i = 0; i < n; i++) {
@@ -104,9 +108,31 @@ function buildWorld() {
   T(50.6, 30.4, 4.4, 2.2, 'craps', 'S');
   T(58.5, 30.5, 3.6, 1.8, 'roulette', 'S');
   addObj({ x: M(65.2), y: M(24), w: M(1.6), h: M(1.4), type: 'bigsix', dir: 'W', seatOff: 26 });
+  // Three Card Poker and Sic Bo (games2.js)
+  T(63.5, 7, 3.4, 1.7, 'threecard', 'N', { minBet: 25, maxBet: 25_000 });
+  T(63.5, 15.3, 3.4, 1.7, 'threecard', 'S', { minBet: 25, maxBet: 25_000 });
+  T(63.3, 30.5, 3.6, 1.8, 'sicbo', 'S', { minBet: 10, maxBet: 50_000 });
   // pit podiums (supervisor desks) in the middle of each pit
   addObj({ x: M(55.4), y: M(11.8), w: M(1.6), h: M(1), decor: 'podium' });
   addObj({ x: M(55.4), y: M(26.8), w: M(1.6), h: M(1), decor: 'podium' });
+
+  // --- Sportsbook & keno lounge (south of the tables, east of the entrance walkway) ---
+  // video poker bank: two back-to-back rows of six, each with its own paytable
+  const VP_TABLES = ['6/5', '6/5', '8/5', '6/5', '8/5', '6/5', '9/6', '6/5', '8/5', '6/5', '8/5', '6/5'];
+  for (let i = 0; i < 6; i++) {
+    addObj({ x: M(50.6) + i * MW, y: M(41.9) - MD, w: MW, h: MD, type: 'videopoker', dir: 'N', pay: VP_TABLES[i], seatOff: 13 });
+    addObj({ x: M(50.6) + i * MW, y: M(41.9), w: MW, h: MD, type: 'videopoker', dir: 'S', pay: VP_TABLES[6 + i], seatOff: 13 });
+  }
+  // race book and keno terminals face big screens on the south wall
+  for (let i = 0; i < 4; i++) {
+    addObj({ x: M(51.6 + i * 1.5), y: M(46), w: M(0.9), h: M(0.7), type: 'racebook', dir: 'N', seatOff: 14 });
+    addObj({ x: M(60.3 + i * 1.5), y: M(46), w: M(0.9), h: M(0.7), type: 'keno', dir: 'N', seatOff: 14 });
+  }
+  addObj({ x: M(51.45), y: M(49.2), w: M(5.6), h: 6, decor: 'raceScreen', dir: 'N', solid: false });
+  addObj({ x: M(60.65), y: M(49.2), w: M(4.6), h: 6, decor: 'kenoScreen', dir: 'N', solid: false });
+  // scratch card kiosks
+  addObj({ x: M(67.2), y: M(41.2), w: M(0.7), h: M(0.9), type: 'lottery', dir: 'W', seatOff: 14 });
+  addObj({ x: M(67.2), y: M(43.6), w: M(0.7), h: M(0.9), type: 'lottery', dir: 'W', seatOff: 14 });
 
   // --- High limit room --------------------------------------------------------
   T(71.5, 6.5, 3.4, 1.7, 'blackjack_hl', 'S', { minBet: 10_000, maxBet: 1_000_000 });
