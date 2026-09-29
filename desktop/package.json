@@ -38,8 +38,6 @@
           ]
         }
       ],
-      "identity": "-",
-      "hardenedRuntime": false,
       "gatekeeperAssess": false
     },
     "dmg": {

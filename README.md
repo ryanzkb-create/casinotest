@@ -18,6 +18,7 @@ The `desktop/` folder wraps the game in its own Mac app (Electron, not the App S
 
 - **Download:** on GitHub open **Actions → Mac app**, pick the latest successful run and download `golden-mirage-mac` under *Artifacts*. Unzip it and open the `.dmg` for your Mac (`arm64` for Apple Silicon M1–M4, `x64` for Intel), then drag Golden Mirage into Applications.
 - **First launch:** the app isn't notarised by Apple, so macOS blocks it the first time. Right-click the app and choose **Open**, or go to **System Settings → Privacy & Security** and click **Open Anyway**. If macOS says the app is damaged, run `xattr -cr "/Applications/Golden Mirage.app"` in Terminal once.
+- **Signed and notarized (no warning):** with an Apple Developer Program account, create a *Developer ID Application* certificate, export it as a `.p12`, and add the repository secrets listed at the top of `.github/workflows/mac-app.yml` (`MAC_CERT_P12` as base64, `MAC_CERT_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`). The next build signs and notarizes the app automatically.
 - **Build it yourself** (needs Node.js 20+ and Python 3): `cd desktop && npm install && npm start` to run it, or `npm run dist` to make the `.dmg` files in `desktop/dist/`.
 
 | Action | Keyboard / mouse | Touch |

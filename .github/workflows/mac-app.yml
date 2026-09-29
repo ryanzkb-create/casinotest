@@ -1,5 +1,14 @@
 # Builds the Golden Mirage Mac app (.dmg for Apple Silicon and Intel).
 # Download it from the run's "Artifacts" section on the Actions tab.
+#
+# Without secrets the app is ad-hoc signed (macOS shows an "unverified developer"
+# warning). With an Apple Developer account, add these repository secrets and the
+# same workflow signs with your Developer ID certificate and notarizes with Apple:
+#   MAC_CERT_P12                base64 of the "Developer ID Application" certificate (.p12)
+#   MAC_CERT_PASSWORD           the password you set when exporting the .p12
+#   APPLE_ID                    your Apple ID email
+#   APPLE_APP_SPECIFIC_PASSWORD app-specific password from appleid.apple.com
+#   APPLE_TEAM_ID               10-character Team ID from developer.apple.com/account
 name: Mac app
 
 on:
@@ -11,7 +20,9 @@ on:
 jobs:
   build:
     runs-on: macos-14
-    timeout-minutes: 30
+    timeout-minutes: 45
+    env:
+      HAVE_CERT: ${{ secrets.MAC_CERT_P12 != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,9 +33,20 @@ jobs:
       - name: Install
         working-directory: desktop
         run: npm ci
-      - name: Build .dmg
+      - name: Build .dmg (ad-hoc signed)
+        if: env.HAVE_CERT != 'true'
         working-directory: desktop
-        run: npm run dist
+        run: npm run dist -- -c.mac.identity=- -c.mac.hardenedRuntime=false
+      - name: Build .dmg (Developer ID signed and notarized)
+        if: env.HAVE_CERT == 'true'
+        working-directory: desktop
+        env:
+          CSC_LINK: ${{ secrets.MAC_CERT_P12 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: npm run dist -- -c.mac.hardenedRuntime=true -c.mac.notarize=true
       - uses: actions/upload-artifact@v4
         with:
           name: golden-mirage-mac
