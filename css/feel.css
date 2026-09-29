@@ -1,0 +1,111 @@
+/* Golden Mirage: game feel, objective, news ticker, pause menu, accessibility */
+
+/* ---- combat feedback ---- */
+#hitmarker { position: fixed; left: 50%; top: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; pointer-events: none; z-index: 19; opacity: 0; }
+#hitmarker i { position: absolute; width: 9px; height: 2px; background: #fff; box-shadow: 0 0 2px #000; }
+#hitmarker i:nth-child(1) { left: 2px; top: 6px; transform: rotate(45deg); }
+#hitmarker i:nth-child(2) { right: 2px; top: 6px; transform: rotate(-45deg); }
+#hitmarker i:nth-child(3) { left: 2px; bottom: 6px; transform: rotate(-45deg); }
+#hitmarker i:nth-child(4) { right: 2px; bottom: 6px; transform: rotate(45deg); }
+#hitmarker.on { animation: hitm 0.28s ease-out; }
+#hitmarker.kill i { background: #ff4a4a; width: 12px; }
+@keyframes hitm { 0% { opacity: 1; transform: scale(0.7); } 100% { opacity: 0; transform: scale(1.25); } }
+
+#lowhp { position: fixed; inset: 0; pointer-events: none; z-index: 15; opacity: 0; transition: opacity 0.6s;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(170, 0, 0, 0.5) 100%); }
+body.lowhp-on #lowhp { opacity: 1; animation: lowpulse 1.1s ease-in-out infinite alternate; }
+@keyframes lowpulse { from { opacity: 0.55; } to { opacity: 1; } }
+
+#deathfx { position: fixed; inset: 0; pointer-events: none; z-index: 17; opacity: 0; background: radial-gradient(ellipse at center, rgba(40, 0, 0, 0.1), rgba(0, 0, 0, 0.92)); transition: opacity 1.4s ease-in; }
+#deathfx.on { opacity: 1; }
+
+#stamina { height: 4px; margin-top: 5px; background: rgba(0,0,0,0.55); overflow: hidden; opacity: 0; transition: opacity 0.3s; }
+#stamina.show { opacity: 1; }
+#stamina div { height: 100%; width: 100%; background: #e8e8e8; }
+#stamina.empty div { background: #e0474c; }
+
+#corner-buttons { display: flex; gap: 8px; }
+
+/* ---- notifications ---- */
+.toast.ach { border-color: #f2c14e; background: rgba(38, 28, 4, 0.88); }
+.toast .muted { font-size: 0.85em; }
+
+/* ---- objective + news ticker ---- */
+#objective, #ticker {
+  position: fixed; left: 50%; transform: translateX(-50%); z-index: 19; pointer-events: none;
+  background: rgba(0, 0, 0, 0.62); border-radius: 4px; text-shadow: 0 1px 2px #000;
+}
+#objective { top: calc(12px + env(safe-area-inset-top, 0px)); width: max-content; max-width: min(680px, calc(100vw - 660px)); padding: 6px 12px; font-size: 15px; line-height: 1.3; display: flex; gap: 10px; align-items: baseline; }
+#objective span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+#objective b { font-family: var(--label); letter-spacing: 0.14em; font-size: 12px; color: var(--gold); flex: none; }
+#ticker { top: calc(50px + env(safe-area-inset-top, 0px)); width: max-content; max-width: min(680px, calc(100vw - 660px)); padding: 4px 12px; font-size: 12px; line-height: 1.3; display: flex; gap: 10px; align-items: baseline; transition: opacity 0.35s; }
+#ticker.swap { opacity: 0; }
+#ticker b { font-family: var(--label); letter-spacing: 0.14em; font-size: 11px; background: #c0392b; padding: 1px 6px; border-radius: 2px; flex: none; }
+#ticker .tk-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+#ticker em { color: var(--muted); font-size: 10px; flex: none; max-width: 28%; }
+body.in-game #objective, body.in-game #ticker { display: none !important; }
+@media (max-width: 1000px) { #ticker { display: none; } #objective { max-width: calc(100vw - 300px); font-size: 13px; } }
+
+/* ---- controller focus + labels ---- */
+body.pad button:focus, body.pad input:focus, body.pad select:focus { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+/* ---- intro additions ---- */
+.continue-row { display: flex; justify-content: center; margin: 6px 0 10px; }
+.continue-row .btn { display: inline-flex; flex-direction: column; gap: 2px; }
+.continue-row small { font-weight: 600; font-size: 13px; opacity: 0.85; }
+.career-line { margin: 6px 0; }
+.settings-block h3 { margin: 10px 0 4px; color: var(--gold); font-family: var(--label); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+.set-slider { display: grid; gap: 2px; margin: 4px 0; }
+.set-slider label { font-size: 14px; display: flex; justify-content: space-between; gap: 8px; }
+.set-slider label b { color: var(--gold); font-variant-numeric: tabular-nums; }
+.set-slider input[type=range] { width: 100%; accent-color: var(--gold); }
+.set-slider select { font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--gold-dim); background: #0e070c; color: var(--text); }
+.set-check { display: flex; gap: 8px; align-items: center; font-size: 14px; margin: 4px 0; cursor: pointer; }
+.set-check input { width: 18px; height: 18px; accent-color: var(--gold); }
+
+/* ---- pause menu, controls, career ---- */
+.pause-list { display: grid; gap: 8px; margin-bottom: 10px; }
+.pause-list .btn { text-align: left; font-size: 17px; padding: 12px 16px; }
+.kb-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 4px 16px; margin: 8px 0; }
+.kb-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.07); font-size: 14px; }
+.kb-btn { min-width: 84px; padding: 4px 12px; font-family: var(--display); font-weight: 400; letter-spacing: 0.5px; }
+.kb-btn.listening { border-color: var(--gold); color: var(--gold); }
+.kb-fixed { margin: 6px 0 10px; }
+.kb-fixed b { color: var(--gold); font-weight: 600; text-align: right; }
+.controls-panel h3, .career-panel h3, .epilogue h3 { margin: 12px 0 4px; color: var(--gold); font-family: var(--label); text-transform: uppercase; letter-spacing: 0.08em; }
+.ach-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 6px; }
+.ach { display: flex; gap: 10px; padding: 8px 10px; border-radius: 8px; background: rgba(255,255,255,0.04); opacity: 0.5; filter: grayscale(1); }
+.ach.got { opacity: 1; filter: none; background: rgba(242, 193, 78, 0.1); border: 1px solid rgba(242, 193, 78, 0.35); }
+.ach-i { font-size: 24px; }
+.ach b { display: block; font-size: 14px; }
+.ach small { display: block; color: var(--muted); font-size: 12px; line-height: 1.35; }
+.ach em { font-size: 11px; color: var(--gold-dim); }
+
+/* ---- host app + epilogue ---- */
+.offer-card { border: 1px dashed var(--gold); }
+.offer-title { font-family: var(--display); font-size: 22px; color: var(--gold); letter-spacing: 0.5px; }
+.offer-math { margin-top: 8px; padding: 8px; background: rgba(224, 71, 76, 0.12); border-radius: 6px; font-size: 13px; }
+.epilogue { text-align: left; }
+.epilogue h2 { font-family: var(--display); font-weight: 400; color: var(--gold); text-align: center; letter-spacing: 0.5px; }
+.epilogue .story { font-style: italic; text-align: center; color: #d5d9e2; }
+.end-stats em { display: block; font-style: normal; font-size: 11px; color: var(--muted); }
+
+/* ---- accessibility ---- */
+body.ts-big #toasts, body.ts-big #prompt, body.ts-big #objective, body.ts-big #ticker, body.ts-big #hud-top,
+body.ts-big .modal-box, body.ts-big #gu-panel, body.ts-big #gu-buttons, body.ts-big .screen-box { zoom: var(--ts, 1); }
+body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+body.reduce-motion.lowhp-on #lowhp { animation: none; opacity: 0.8; }
+@media (prefers-reduced-motion: reduce) { #lowhp { animation: none !important; } }
+
+/* colour-blind friendly: blue/orange instead of green/red, and patterns so state never relies on colour alone */
+body.cb { --win: #56b4e9; --lose: #e69f00; }
+body.cb .hbar.health div { background: #56b4e9; }
+body.cb .cash { color: #56b4e9; }
+body.cb #b-debt { background: linear-gradient(90deg, #f0e442, #d55e00); }
+.vital.low .fill, .hbar.health.low div, #stamina.empty div {
+  background-image: repeating-linear-gradient(45deg, rgba(0,0,0,0.4) 0 4px, transparent 4px 8px);
+}
+.vital.low .vital-label { font-weight: 700; }
+body.cb .fill.hunger { background: #e69f00; } body.cb .fill.thirst { background: #56b4e9; } body.cb .fill.energy { background: #f0e442; }
+body.cb #h-net.neg::before { content: '▼ '; } body.cb #h-net.pos::before { content: '▲ '; }
+body.cb .debt-line.danger b::before { content: '! '; }

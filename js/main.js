@@ -55,7 +55,9 @@ function showIntro() {
     <button class="btn primary big" id="start-btn" ${assetsReady ? '' : 'disabled'}>${assetsReady ? 'Walk into the casino' : 'Loading Las Vegas…'}</button>
     <div id="load-bar" class="${assetsReady ? 'hidden' : ''}"><div style="width:${Math.round(loadProgress * 100)}%"></div></div>
     <div class="load-note ${assetsReady ? 'hidden' : ''}">Loading realistic 3D people, lighting and the Strip (about 15 MB).</div>`);
-  s.querySelector('#start-btn').onclick = () => { hideScreen(); sfx('far'); };
+  s.querySelector('#start-btn').onclick = () => { hideScreen(); if (window.GMSave) GMSave.begin(); };
+  if (window.GMSave) GMSave.decorateIntro(s);
+  if (window.GMFeel) GMFeel.decorateIntro(s);
   const sens = s.querySelector('#set-sens'), sensVal = s.querySelector('#set-sens-val');
   sens.oninput = () => { SETTINGS.sens = +sens.value; sensVal.textContent = SETTINGS.sens.toFixed(1) + '×'; saveSettings(); };
   const qual = s.querySelector('#set-quality'), reload = s.querySelector('#set-reload');

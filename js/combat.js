@@ -22,28 +22,9 @@ function activeOf(role) { return npcs.filter(n => n.role === role && n.state !==
 function removeNPC(n) { n.state = 'gone'; npcs = npcs.filter(x => x !== n); }
 
 // ---------------------------------------------------------------------------
-// Sound (tiny WebAudio synth so there are no files to load)
+// Sound: delegated to the procedural engine in js/audio.js
 // ---------------------------------------------------------------------------
-let audioCtx = null;
-function sfx(kind) {
-  try {
-    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-    const t = audioCtx.currentTime;
-    const len = kind === 'shotgun' ? 0.45 : 0.25;
-    const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * len, audioCtx.sampleRate);
-    const d = buf.getChannelData(0);
-    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, kind === 'hurt' ? 1 : 3);
-    const src = audioCtx.createBufferSource();
-    src.buffer = buf;
-    const f = audioCtx.createBiquadFilter();
-    f.type = 'lowpass';
-    f.frequency.value = kind === 'hurt' ? 500 : kind === 'shotgun' ? 1400 : 2400;
-    const g = audioCtx.createGain();
-    g.gain.setValueAtTime(kind === 'far' ? 0.25 : 0.6, t);
-    src.connect(f); f.connect(g); g.connect(audioCtx.destination);
-    src.start(t);
-  } catch (e) { /* audio unavailable */ }
-}
+function sfx(kind) { if (window.sfxPlay) window.sfxPlay(kind); }
 
 // ---------------------------------------------------------------------------
 // Spawning
