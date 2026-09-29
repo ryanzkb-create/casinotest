@@ -94,6 +94,9 @@ export class Batcher {
 export const MAT = {};
 export function initMaterials() {
   const std = (color, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color, roughness: 0.6, metalness: 0 }, o));
+  const leatherN = TX.normalMapFrom(TX.leatherGrain([3, 3]), { strength: 1.6, blur: 0 });
+  const woodMat = (color, roughness) => { const map = TX.woodTex([2, 2]); return new THREE.MeshStandardMaterial({ map, normalMap: TX.normalMapFrom(map, { strength: 1.4, blur: 0 }), roughness, color }); };
+  const marbleMat = kind => { const map = TX.marbleTex(kind, [1, 1]); return new THREE.MeshStandardMaterial({ map, normalMap: TX.normalMapFrom(map, { strength: 0.5, blur: 2 }), roughnessMap: TX.marbleRoughMap(map), roughness: 0.6 }); };
   Object.assign(MAT, {
     gold: std('#c9a04e', { metalness: 1, roughness: 0.42 }),
     brass: std('#b8893a', { metalness: 1, roughness: 0.45 }),
@@ -102,14 +105,14 @@ export function initMaterials() {
     blackGloss: std('#0c0c10', { metalness: 0.4, roughness: 0.18 }),
     blackMatte: std('#141418', { roughness: 0.8 }),
     darkMetal: std('#26262c', { metalness: 0.8, roughness: 0.35 }),
-    wood: new THREE.MeshStandardMaterial({ map: TX.woodTex([2, 2]), roughness: 0.42, color: '#a27a5a' }),
-    woodDark: new THREE.MeshStandardMaterial({ map: TX.woodTex([2, 2]), roughness: 0.35, color: '#6a4a36' }),
-    leather: std('#3a0a12', { roughness: 0.45 }),
-    leatherBlack: std('#121012', { roughness: 0.4 }),
+    wood: woodMat('#a27a5a', 0.42),
+    woodDark: woodMat('#6a4a36', 0.35),
+    leather: std('#3a0a12', { roughness: 0.45, normalMap: leatherN, normalScale: new THREE.Vector2(0.7, 0.7) }),
+    leatherBlack: std('#121012', { roughness: 0.4, normalMap: leatherN, normalScale: new THREE.Vector2(0.7, 0.7) }),
     velvet: new THREE.MeshPhysicalMaterial({ color: '#6a0f2a', roughness: 0.85, sheen: 1, sheenColor: new THREE.Color('#ff7aa0'), sheenRoughness: 0.5 }),
     velvetBlue: new THREE.MeshPhysicalMaterial({ color: '#16306a', roughness: 0.85, sheen: 1, sheenColor: new THREE.Color('#8ab0ff'), sheenRoughness: 0.5 }),
-    marble: new THREE.MeshStandardMaterial({ map: TX.marbleTex('marble', [1, 1]), roughness: 0.28 }),
-    marbleDark: new THREE.MeshStandardMaterial({ map: TX.marbleTex('marbleDark', [1, 1]), roughness: 0.28 }),
+    marble: marbleMat('marble'),
+    marbleDark: marbleMat('marbleDark'),
     glass: new THREE.MeshPhysicalMaterial({ color: '#b8d4e0', roughness: 0.03, metalness: 0, transparent: true, opacity: 0.18, envMapIntensity: 1.5, depthWrite: false }),
     white: std('#f4f1ea', { roughness: 0.5 }),
     cream: std('#efe3c8', { roughness: 0.6 }),
@@ -164,6 +167,7 @@ const cyl = (rt, rb, h, mat, p, x, y, z, seg = 20) => mesh(new THREE.CylinderGeo
 // Floors, walls, ceiling
 // ---------------------------------------------------------------------------
 export const CEIL = 7;
+export const CHANDELIERS = [[26, 44, 2.2], [55.5, 12.2, 2.6], [55.5, 27.2, 2.6], [79, 8.5, 2], [82, 27, 1.8], [45, 38, 1.6], [45, 20, 1.6]];
 
 export function buildShell(scene, batch, dyn) {
   // Floors
@@ -171,10 +175,16 @@ export function buildShell(scene, batch, dyn) {
     if (z.floor === 'sidewalk') return;
     const wm = W(z.w), hm = W(z.h);
     let mat;
-    if (z.floor.startsWith('carpet')) mat = new THREE.MeshStandardMaterial({ map: TX.carpetTex(z.floor, [wm / 6, hm / 6]), roughness: 0.95 });
-    else if (z.floor.startsWith('marble')) mat = new THREE.MeshStandardMaterial({ map: TX.marbleTex(z.floor, [wm / 3, hm / 3]), roughness: 0.5, envMapIntensity: 1.0 });
-    else if (z.floor === 'wood') mat = new THREE.MeshStandardMaterial({ map: TX.woodTex([wm / 3, hm / 3]), roughness: 0.4, color: '#b08868' });
-    else mat = new THREE.MeshStandardMaterial({ map: TX.tilesTex([wm / 2, hm / 2]), roughness: 0.32 });
+    if (z.floor.startsWith('carpet')) {
+      // pile: fine noise plus the pattern's own relief, so lights rake across it
+      mat = new THREE.MeshStandardMaterial({ ...TX.floorPBR(z.floor, [wm / 6, hm / 6]), roughness: 0.92 });
+    } else if (z.floor.startsWith('marble')) {
+      // polished stone: glossy slabs, rougher grout and veins; High adds a clear-coat for sharp light reflections
+      const o = { ...TX.floorPBR(z.floor, [wm / 3, hm / 3]), roughness: 0.8, envMapIntensity: 1.3 };
+      mat = dyn.hi ? new THREE.MeshPhysicalMaterial({ ...o, clearcoat: 0.7, clearcoatRoughness: 0.06 }) : new THREE.MeshStandardMaterial(o);
+    } else if (z.floor === 'wood') {
+      mat = new THREE.MeshStandardMaterial({ ...TX.floorPBR('wood', [wm / 3, hm / 3]), roughness: 0.5, color: '#b08868' });
+    } else mat = new THREE.MeshStandardMaterial({ map: TX.tilesTex([wm / 2, hm / 2]), roughness: 0.32 });
     const m = new THREE.Mesh(new THREE.PlaneGeometry(wm, hm), mat);
     m.rotation.x = -Math.PI / 2;
     m.position.set(W(z.x) + wm / 2, 0.001 * (i + 1), W(z.y) + hm / 2);
@@ -193,13 +203,15 @@ export function buildShell(scene, batch, dyn) {
       g.restore();
     }
   }, { repeat: [1, 1] });
-  const wallMat = new THREE.MeshStandardMaterial({ map: paper, roughness: 0.75 });
+  const paperN = TX.normalMapFrom(paper, { strength: 1.4, blur: 1 });
+  const wallMat = new THREE.MeshStandardMaterial({ map: paper, normalMap: paperN, roughness: 0.75 });
   const wall = (x0, z0, x1, z1, inward) => {
     const len = Math.hypot(x1 - x0, z1 - z0);
     const ang = Math.atan2(z1 - z0, x1 - x0);
     const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
     const tex = paper.clone(); tex.needsUpdate = true; tex.repeat.set(len / 2.2, (CEIL - 1.3) / 2.2); tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-    const m = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.75 });
+    const nt = paperN.clone(); nt.needsUpdate = true; nt.repeat.copy(tex.repeat);
+    const m = new THREE.MeshStandardMaterial({ map: tex, normalMap: nt, roughness: 0.75 });
     const rot = new THREE.Matrix4().makeRotationY(-ang);
     const place = (w, h, d, y, mat, off = 0) => {
       const mm = tf(cx + Math.cos(ang + Math.PI / 2) * inward * off, y, cz + Math.sin(ang + Math.PI / 2) * inward * off).multiply(rot);
@@ -240,7 +252,7 @@ export function buildShell(scene, batch, dyn) {
   batch.add(new THREE.BoxGeometry(0.06, 0.06, 49.8), MAT.ledCyan, tf(89.6, CEIL - 0.45, 24.9), { noShadow: true });
 
   // Chandeliers
-  for (const [x, z, r] of [[26, 44, 2.2], [55.5, 12.2, 2.6], [55.5, 27.2, 2.6], [79, 8.5, 2], [82, 27, 1.8], [45, 38, 1.6], [45, 20, 1.6]]) chandelier(batch, x, z, r);
+  for (const [x, z, r] of CHANDELIERS) chandelier(batch, x, z, r);
 
   // LED billboard screens on the walls
   const ads = [

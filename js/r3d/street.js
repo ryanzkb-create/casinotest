@@ -19,15 +19,25 @@ function emissivePlane(tex, w, h, intensity = 1.6, color = '#fff', transparent =
   return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: tex, emissive: color, emissiveMap: tex, emissiveIntensity: intensity, color: '#000', transparent, depthWrite: !transparent }));
 }
 
+// Asphalt with damp patches: the roughness map marks puddles/oil, main.js lowers material.roughness at night for a wet look
+function asphalt(map) {
+  const sm = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  return new THREE.MeshStandardMaterial({ map, normalMap: TX.normalMapFrom(map, { strength: 2.4, noise: 0.4, blur: 0 }),
+    roughnessMap: TX.roughMapFrom(map, (l, x, y) => 1 - 0.75 * sm(0.58, 0.68, TX.cloud(x / 64, y / 64, 8) * 0.7 + TX.cloud(x / 16, y / 16, 32) * 0.3) - l * 0.3), roughness: 0.95 });
+}
+function paved(map) {
+  return new THREE.MeshStandardMaterial({ map, normalMap: TX.normalMapFrom(map, { strength: 1.6, noise: 0.25, blur: 0 }), roughness: 0.8 });
+}
+
 export function buildStreet(scene, batch, dyn, models) {
   const FZ = W(1004); // outside face of the casino front wall
   // ground planes
-  const sw = new THREE.Mesh(new THREE.PlaneGeometry(500, CURB_Z - FZ + 0.4), new THREE.MeshStandardMaterial({ map: TX.sidewalkTex([125, 2]), roughness: 0.8 }));
+  const sw = new THREE.Mesh(new THREE.PlaneGeometry(500, CURB_Z - FZ + 0.4), paved(TX.sidewalkTex([125, 2])));
   sw.rotation.x = -Math.PI / 2; sw.position.set(45, 0.02, (FZ + CURB_Z) / 2); sw.receiveShadow = true; scene.add(sw);
-  const road = new THREE.Mesh(new THREE.PlaneGeometry(500, ROAD_W), new THREE.MeshStandardMaterial({ map: TX.asphaltTex([100, 4]), roughness: 0.85 }));
+  const road = new THREE.Mesh(new THREE.PlaneGeometry(500, ROAD_W), asphalt(TX.asphaltTex([100, 4])));
   road.rotation.x = -Math.PI / 2; road.position.set(45, 0.0, CURB_Z + ROAD_W / 2); road.receiveShadow = true; scene.add(road);
   dyn.wetRoad = road.material;
-  const sw2 = new THREE.Mesh(new THREE.PlaneGeometry(500, 6), new THREE.MeshStandardMaterial({ map: TX.sidewalkTex([125, 1.5]), roughness: 0.8 }));
+  const sw2 = new THREE.Mesh(new THREE.PlaneGeometry(500, 6), paved(TX.sidewalkTex([125, 1.5])));
   sw2.rotation.x = -Math.PI / 2; sw2.position.set(45, 0.14, CURB_Z + ROAD_W + 3); sw2.receiveShadow = true; scene.add(sw2);
   const far = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshStandardMaterial({ color: '#3a3226', roughness: 1 }));
   far.rotation.x = -Math.PI / 2; far.position.set(45, -0.05, 0); far.receiveShadow = true; scene.add(far);
@@ -118,7 +128,8 @@ function palm(batch, x, z, s) {
 }
 
 function buildFacade(scene, batch, dyn, FZ) {
-  const stone = new THREE.MeshStandardMaterial({ map: TX.stoneTex([30, 5], '#c9b48e'), roughness: 0.75 });
+  const stoneMap = TX.stoneTex([30, 5], '#c9b48e');
+  const stone = new THREE.MeshStandardMaterial({ map: stoneMap, normalMap: TX.normalMapFrom(stoneMap, { strength: 1.8, noise: 0.3, blur: 0 }), roughness: 0.75 });
   const H = 16;
   const x1 = W(DOOR.x1), x2 = W(DOOR.x2);
   // wall pieces either side of the entrance, plus the part above it
