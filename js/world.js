@@ -111,7 +111,7 @@ function setupInput() {
     if (screenOpen) return;
     if (typeof gameSession !== 'undefined' && gameSession) { gameKey(k, e); return; }
     if (k === 'escape') {
-      if (phoneOpen) closePhone(); else if (modalOpen) closeModal();
+      if (phoneOpen) closePhone(); else if (modalOpen) closeModal(); else if (window.GMFeel) GMFeel.pause();
       return;
     }
     if (modalOpen) return;
@@ -235,7 +235,7 @@ function updateWorld(dt) {
     dy = ry * ix + fy * -iy;
     const l = Math.hypot(dx, dy); dx /= l; dy /= l;
   }
-  const sprint = (keys['shift'] || touch.sprint) && !view.aiming && S.energy > 5;
+  const sprint = (keys['shift'] || touch.sprint) && !view.aiming && S.energy > 5 && (typeof GMStamina === 'undefined' || GMStamina.ok);
   let speed = view.aiming ? SPEED.walk : sprint ? SPEED.sprint : view.walk || (touch.active && mag < 0.55) ? SPEED.walk : SPEED.jog;
   speed *= (S.energy < 20 ? 0.7 : 1) * (S.health < 30 ? 0.7 : 1);
   player.moving = false;
@@ -327,7 +327,7 @@ function render(time) {
   updateZoneName();
   const prompt = $('#prompt');
   const near = blocked() ? null : nearbyTarget();
-  const html = near ? `<b>E</b> ${targetLabel(near)}` : '';
+  const html = near ? `<b>${window.GMFeel ? GMFeel.interactKey() : 'E'}</b> ${targetLabel(near)}` : '';
   if (html !== render.prompt) {   // only touch the DOM when the prompt changes
     render.prompt = html;
     if (html) prompt.innerHTML = html;

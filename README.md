@@ -29,9 +29,14 @@ The `desktop/` folder wraps the game in its own Mac app (Electron, not the App S
 | Aim / shoot | Hold right mouse, then left click or `F` | AIM, then FIRE |
 | Switch weapon | `Q` | Q button |
 | Phone | `P` | 📱 button |
+| Pause menu (settings, controls, achievements, restart) | `Esc` (or release the mouse) | |
 | Close window / stand up from a game | `Esc` | ✕ / Leave |
 
-**Settings** (on the start screen, or the **?** button in game): look speed for mouse and touch, and a graphics preset. *Auto* picks High in the Mac app, Medium in browsers on computers and Low on phones; if the game stutters (Safari on a retina Mac is the most demanding case), choose **Low**. The game also steps its quality down by itself when the frame rate drops.
+Every key can be **rebound** in *Pause > Controls* (with a live display of the current keys). Sprinting now uses a stamina bar under the radar.
+
+**Controller** (any standard gamepad): left stick move, right stick look, `LT` aim, `RT` fire, `A` use / talk / sit, `B` back, `X` walk/jog, `Y` phone, `RB` switch weapon, `LB` camera distance, click left stick to sprint, `Start` pause. Menus, the phone and the casino tables work with the D-pad and `A` / `B` (at tables: D-pad up/down changes the bet, left/right chooses, `A` plays, `X` / `Y` are the other actions). Rumble is supported and can be switched off.
+
+**Settings** (on the start screen, in the pause menu, or the **?** button in game): sound (master, effects, music, ambience, mute), look speed for mouse and touch, text size, reduced motion, a colour-blind friendly HUD, controller rumble and a graphics preset. *Auto* picks High in the Mac app, Medium in browsers on computers and Low on phones; if the game stutters (Safari on a retina Mac is the most demanding case), choose **Low**. The game also steps its quality down by itself when the frame rate drops.
 
 ### Playing the casino games
 Walk up to a slot machine or table and press `E` to sit down. The camera moves to your seat and the game is played in 3D: the dealer deals real cards, chips stack up on the felt, the roulette ball drops into a pocket, dice bounce across the craps table and the Big Six wheel clicks to a stop. The first time you sit at each game a short **tutorial** explains the rules, the payouts and the real house edge. Press `T` at any time to see it again.
@@ -45,6 +50,29 @@ Walk up to a slot machine or table and press `E` to sit down. The camera moves t
 | Tutorial / leave | `T` / `Esc` |
 
 ## Features
+
+### Sound
+All audio is generated in your browser with WebAudio (there are no sound files). It starts after your first click or key press.
+- A busy casino floor (crowd murmur, distant slot chimes and coins, air conditioning) that fades to the Strip (wind, traffic, sirens at night, a distant club, birds by day) when you step outside, plus a generative lounge-jazz band that plays in the casino and turns muffled outside.
+- Slot reels, win jingles (which also celebrate "wins" that lose money, on purpose), a jackpot fanfare, chips, cards, the roulette ball, dice and the Big Six wheel.
+- Footsteps that follow your speed and the floor: carpet, marble, wood, tile and pavement.
+- Gunshots, ricochets, shell casings, hit markers, a heartbeat when your health is low, and tense music when someone is hunting you.
+- Phone rings and message pings, UI clicks, and achievement chimes. Other code can call `window.sfxPlay('name')` (it does nothing until audio is unlocked).
+
+### Save, career and progression
+- **Autosave** every 20 seconds (and when the tab is hidden). The start screen offers **Continue** or **New game**. Leaving a table mid-spin forfeits the stake, so reloading cannot undo a loss.
+- **Career stats** across runs: biggest win, longest survival, lowest and best net worth walked away with, lifetime wagered and lost.
+- **Reality-check achievements**: honest ones ("First $100k lost", "Chased losses", "Took a loan shark loan", "Fooled by a fake win", "Took the bait"...). None reward winning.
+- An **objective helper** at the top of the screen tells you what to do next (eat, repay Tony, go home) with a direction and distance.
+- A **news ticker** with headlines about gambling harms and real statistics (each tagged with its source and marked approximate; the fictional headlines are labelled as fictional).
+- The **VIP host** on your phone (Diana) sends "free play" and "we miss you" offers. Accepting one asks you to wager a large sum; the app shows the math of what that will cost you, and afterwards compares the "gift" with your actual expected loss.
+- A **casino credit line (marker)**, the third debt source: 25% finance charge up front, due in 5 days, then 5% a day, rewards suspended and a credit report. The **ATM** offers cash advances against it with extra fees.
+- **Player-driven events**: a stranger selling a "sure thing", the hot-hand superstition prompt, a pickpocket, a drunk asking for a loan, a pit boss with a comp dinner after a big win, and security ejecting a winning blackjack player.
+- **Hotel**: room service, and **sleep quality** that suffers from debt worry, a losing streak, hunger or sleeping on the street.
+- The **walk-away epilogue** breaks down where the money went: house edge, luck, interest, credit fees, living costs, robberies and more.
+
+### Feel
+Camera shake on shots and hits, hit markers, a red vignette at low health, a slow-motion beat before the hospital when you are knocked out, sprint stamina, GTA-style help text that shows `A` on a controller, and a pause menu. Text size, reduced motion (also follows the system setting) and a colour-blind palette with patterned warnings are in Settings.
 
 ### Casino games (real odds)
 | Game | House edge |
@@ -87,7 +115,7 @@ The more you bet, the more "free" stuff you get: free drinks (Silver), free buff
 - **Rewards** and **Get Help** (problem gambling resources).
 
 ### Endings
-- **Game over** when your total debt passes **$1,000,000**.
+- **Game over** when your total debt (bank, Tony, casino marker and medical bills) passes **$1,000,000**.
 - Or take the **bus out of town** at any time to walk away with whatever you have left.
 
 Either way you can start again with $2M, and the house will win again.

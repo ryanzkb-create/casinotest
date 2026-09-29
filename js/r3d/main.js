@@ -386,6 +386,7 @@ function updateCamera(dt) {
     cam.init = true;
   }
   camera.position.copy(cam.pos);
+  if (window.GMFeel) GMFeel.shakeOffset(camera.position);   // recoil / hit shake
   camera.lookAt(cam.look);
   camera.updateProjectionMatrix();
 }

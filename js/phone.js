@@ -41,7 +41,7 @@ function showApp(id) {
   }
   const body = el('div', 'phone-body');
   scr.appendChild(body);
-  ({ home: appHome, bank: appBank, shark: appShark, messages: appMessages, stats: appStats, rewards: appRewards, help: appHelp })[id](body);
+  Object.assign({ home: appHome, bank: appBank, shark: appShark, messages: appMessages, stats: appStats, rewards: appRewards, help: appHelp }, window.EXTRA_APPS || {})[id](body);
   updateHUD(true);
 }
 
@@ -56,6 +56,7 @@ function appHome(body) {
     const b = el('button', 'app-icon', `<span>${a.icon}</span>${a.name}`);
     if (a.id === 'messages' && S.unread) b.innerHTML += `<i class="dot-badge">${S.unread}</i>`;
     if (a.id === 'shark' && sharkOverdue()) b.innerHTML += '<i class="dot-badge">!</i>';
+    if (a.badge && a.badge()) b.innerHTML += '<i class="dot-badge">!</i>';
     b.onclick = () => showApp(a.id);
     grid.appendChild(b);
   });
