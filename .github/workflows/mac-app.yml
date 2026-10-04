@@ -54,7 +54,8 @@ jobs:
         working-directory: desktop
         run: |
           # secrets are masked by GitHub; surface the tail of the log as annotations
-          tail -n 40 build.log | sed 's/%/%25/g' | while IFS= read -r line; do echo "::error::${line:0:400}"; done
+          # GitHub shows at most 10 annotations per step: keep only the lines that explain the failure
+          grep -inE "error|fail|⨯|cannot|denied|invalid|identity|notar|keychain|certificate|password|status" build.log | grep -v "Process completed" | tail -9 | sed 's/%/%25/g' | while IFS= read -r line; do echo "::error::${line:0:380}"; done
       - uses: actions/upload-artifact@v4
         with:
           name: golden-mirage-mac
