@@ -339,7 +339,13 @@ function updateEnvironment(dt) {
   for (const n of dyn.nightLights) n.l.intensity = n.day + (n.night - n.day) * (1 - day);
   if (dyn.mountains) dyn.mountains.color.set(day > 0.3 ? '#a898a0' : '#2a2438');
   dyn.day = day; dyn.insideMix = insideMix;
-  if (dyn.wetRoad) dyn.wetRoad.roughness = 0.95 - 0.3 * (1 - day);
+  if (dyn.wetRoad) {
+    // damp patches (and their reflections) only at night; by day the asphalt is uniformly dry
+    const wet = !inside && day < 0.35;
+    if (dyn.wetRoad.userData.wet !== wet) { dyn.wetRoad.userData.wet = wet; dyn.wetRoad.roughnessMap = wet ? dyn.wetRoad.userData.puddles : null; dyn.wetRoad.needsUpdate = true; }
+    dyn.wetRoad.roughness = wet ? 0.85 - 0.25 * (1 - day) : 0.95;
+  }
+  if (dyn.wetGlowMat) dyn.wetGlowMat.opacity = inside ? 0 : Math.max(0, 1 - day * 1.8);
   if (bloom) bloom.strength = inside ? 0.5 : 0.35 + (1 - day) * 0.3;
 }
 
@@ -506,7 +512,12 @@ function updateDynamic(dt, t) {
   }
   for (const w of dyn.bigWheels) w.rotation.z += dt * 0.6;
   MAT.bulb.emissiveIntensity = 4.6 + Math.sin(t * 7) * 0.5;
-  for (const n of dyn.neon) n.emissiveIntensity = Math.sin(t * 2.1) > 0.985 ? 1.2 : 5;
+  // neon: a faint buzz, and each sign occasionally stutters on its own
+  for (const n of dyn.neon) {
+    const stutter = Math.sin(t * (1.3 + n.seed) + n.seed * 13) > 0.988 && Math.sin(t * 31 + n.seed) > -0.2;
+    n.m.emissiveIntensity = n.base * (stutter ? 0.2 : 0.95 + 0.05 * Math.sin(t * 41 + n.seed * 5));
+  }
+  if (dyn.beacons) dyn.beacons.emissiveIntensity = (t % 1.6) < 0.25 ? 4 : 0.15;
   // traffic lights
   const phase = (t % 20) / 20;
   for (const lamps of dyn.trafficLights) {

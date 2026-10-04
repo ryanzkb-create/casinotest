@@ -22,14 +22,16 @@ function emissivePlane(tex, w, h, intensity = 1.6, color = '#fff', transparent =
 // Asphalt with damp patches: the roughness map marks puddles/oil, main.js lowers material.roughness at night for a wet look
 function asphalt(map) {
   const sm = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
-  return new THREE.MeshStandardMaterial({ map, normalMap: TX.normalMapFrom(map, { strength: 2.4, noise: 0.4, blur: 0 }),
-    roughnessMap: TX.roughMapFrom(map, (l, x, y) => 1 - 0.75 * sm(0.58, 0.68, TX.cloud(x / 64, y / 64, 8) * 0.7 + TX.cloud(x / 16, y / 16, 32) * 0.3) - l * 0.3), roughness: 0.95 });
+  const m = new THREE.MeshStandardMaterial({ map, normalMap: TX.normalMapFrom(map, { strength: 2.4, noise: 0.4, blur: 0 }), roughness: 0.95 });
+  m.userData.puddles = TX.roughMapFrom(map, (l, x, y) => 1 - 0.75 * sm(0.58, 0.68, TX.cloud(x / 64, y / 64, 8) * 0.7 + TX.cloud(x / 16, y / 16, 32) * 0.3) - l * 0.3);
+  return m;
 }
 function paved(map) {
   return new THREE.MeshStandardMaterial({ map, normalMap: TX.normalMapFrom(map, { strength: 1.6, noise: 0.25, blur: 0 }), roughness: 0.8 });
 }
 
 export function buildStreet(scene, batch, dyn, models) {
+  dyn.glow = [];
   const FZ = W(1004); // outside face of the casino front wall
   // ground planes
   const sw = new THREE.Mesh(new THREE.PlaneGeometry(500, CURB_Z - FZ + 0.4), paved(TX.sidewalkTex([125, 2])));
@@ -72,6 +74,7 @@ export function buildStreet(scene, batch, dyn, models) {
       if (!lampMat) { lampMat = new THREE.MeshStandardMaterial({ color: '#000', emissive: '#ffe2b0', emissiveIntensity: 0.3 }); dyn.nightMats.push({ m: lampMat, day: 0.3, night: 6 }); }
       mesh(new THREE.PlaneGeometry(0.4, 0.8), lampMat, g, 0, 8.78, side * 2.1).rotation.x = Math.PI / 2;
       batch.addObject(g);
+      dyn.glow.push({ x, z: z + side * 2.1, w: 7, len: 7, col: '#ffb868', a: 0.32 });
       if (li++ % 3 === 0 && x > -20 && x < 110 && dyn.streetSpots !== false) {
         const l = new THREE.SpotLight('#ffd8a0', 0, 30, 0.9, 0.6, 1.4);
         l.position.set(x, 8.6, z + side * 2.1);
@@ -103,7 +106,59 @@ export function buildStreet(scene, batch, dyn, models) {
   }
 
   buildSkyline(scene, batch, dyn);
+  buildFarSkyline(scene, batch, dyn);
+  wetGlow(scene, dyn);
   buildCars(scene, dyn, models);
+}
+
+// Additive light pools / neon streaks laid on the road; faded in at night so the asphalt reads as wet
+function wetGlow(scene, dyn) {
+  if (!dyn.streetSpots || !dyn.glow.length) return;
+  const tex = TX.canvasTex(64, 128, (g, w, h) => {
+    const grd = g.createLinearGradient(0, 0, 0, h); grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(0.4, 'rgba(255,255,255,0.35)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = grd; g.fillRect(0, 0, w, h);
+    g.globalCompositeOperation = 'destination-in';   // soft left/right edges
+    const gh = g.createLinearGradient(0, 0, w, 0); gh.addColorStop(0, 'rgba(0,0,0,0)'); gh.addColorStop(0.5, 'rgba(0,0,0,1)'); gh.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = gh; g.fillRect(0, 0, w, h);
+  }, { linear: true });
+  const geos = [];
+  for (const d of dyn.glow) {
+    const q = new THREE.PlaneGeometry(d.w, d.len);
+    q.rotateX(-Math.PI / 2);
+    // uv.y = 1 at +z... flip so the bright end is at the source (toward -z for far signs, centred for lamps)
+    const c = new THREE.Color(d.col).multiplyScalar(d.a);
+    const n = q.attributes.position.count, col = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; }
+    q.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    q.translate(d.x, 0.03, d.z);
+    geos.push(q);
+  }
+  const mat = new THREE.MeshBasicMaterial({ map: tex, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0 });
+  const m = new THREE.Mesh(mergeGeometries(geos), mat);
+  m.renderOrder = 3; m.frustumCulled = false;
+  scene.add(m);
+  dyn.wetGlowMat = mat;
+}
+
+// A second, taller row of lit towers behind the Strip, with blinking aircraft beacons
+function buildFarSkyline(scene, batch, dyn) {
+  const z0 = CURB_Z + ROAD_W + 42;
+  const mats = [0.35, 0.5, 0.65].map((lit, i) => {
+    const wt = TX.windowsTex(8 + i * 2, 24, lit, ['#ffd9a0', '#ffe9c4', '#bcd8ff', '#fff2d0', '#ff9ad0']);
+    const m = new THREE.MeshStandardMaterial({ color: ['#8a93a3', '#a39a9a', '#7c8896'][i], roughness: 0.4, metalness: 0.4, emissive: '#fff', emissiveMap: wt, emissiveIntensity: 1 });
+    dyn.nightMats.push({ m, day: 0.08, night: 1.1 });
+    return m;
+  });
+  dyn.beacons = new THREE.MeshStandardMaterial({ color: '#000', emissive: '#ff2020', emissiveIntensity: 2 });
+  let x = -260;
+  while (x < 360) {
+    const w = 14 + TX.rnd() * 20, h = 60 + TX.rnd() * 150, d = 16 + TX.rnd() * 12;
+    const cx = x + w / 2, cz = z0 + TX.rnd() * 60;
+    batch.add(new THREE.BoxGeometry(w, h, d), mats[(TX.rnd() * 3) | 0], tf(cx, h / 2, cz), { noShadow: true });
+    if (TX.rnd() < 0.6) batch.add(new THREE.BoxGeometry(w * 0.5, h * 0.12, d * 0.5), mats[0], tf(cx, h + h * 0.06, cz), { noShadow: true });
+    batch.add(new THREE.BoxGeometry(0.5, 0.5, 0.5), dyn.beacons, tf(cx, h * (TX.rnd() < 0.6 ? 1.12 : 1) + 0.4, cz), { noShadow: true });
+    x += w * 0.8 + 3 + TX.rnd() * 8;
+  }
 }
 
 function palm(batch, x, z, s) {
@@ -171,7 +226,7 @@ function buildFacade(scene, batch, dyn, FZ) {
   const neon = TX.textTex(['GOLDEN MIRAGE', 'CASINO · HOTEL · RESORT'], { w: 2048, h: 512, color: '#fff2c0', colors: ['#fff2c0', '#ff9ad0'], glow: '#ff3d7f', blur: 40, weights: [1, 0.35] });
   const ns = emissivePlane(neon, 30, 7.5, 2.6, '#ffffff', true);
   ns.position.set(cx, H - 3.6, FZ + 0.25); scene.add(ns);
-  dyn.neon.push(ns.material);
+  dyn.neon.push({ m: ns.material, base: 5, seed: 0.3 });
 
   // hotel tower rising behind the casino
   const tw = 56, td = 18, th = 104, tx = 45, tz = -11; // behind the casino, rising above the facade
@@ -309,6 +364,8 @@ function buildSkyline(scene, batch, dyn) {
     const t = TX.textTex(names[n % names.length], { w: 1024, h: 180, color: '#fff', glow: neonCol, blur: 30 });
     const sgn = emissivePlane(t, Math.min(w * 0.9, 20), Math.min(w * 0.9, 20) * 180 / 1024, 5, neonCol, true);
     sgn.position.set(x + w / 2, pod - 2.2, z0 - 0.05); sgn.rotation.y = Math.PI; scene.add(sgn);
+    dyn.neon.push({ m: sgn.material, base: 5, seed: n * 0.37 + 0.5 });
+    dyn.glow.push({ x: x + w / 2, z: z0 - 9, w: Math.min(w * 0.9, 20) * 0.7, len: 16, col: neonCol, a: 0.5 });
     // LED billboard on some podiums
     if (n % 2 === 0) {
       const bb = TX.textTex([TX.rpick(['LIVE MUSIC', 'ALL YOU CAN EAT', 'MAGIC SHOW', 'POOL PARTY']), TX.rpick(['TONIGHT', 'FROM $19.99', 'SOLD OUT', 'EVERY DAY'])], { w: 1024, h: 512, bg: '#0a0610', color: '#fff', colors: [neonCol, '#fff'] });
