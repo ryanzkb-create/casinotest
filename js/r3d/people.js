@@ -513,7 +513,6 @@ export class Human {
     const target = _p2.setFromUnitVectors(cur, want).multiply(wq);
     const local = bone.parent.getWorldQuaternion(_p3).invert().multiply(target);
     bone.quaternion.slerp(local, w);
-    bone.updateMatrixWorld(true);
   }
 
   // rotate a bone by a rotation given in character space
@@ -524,7 +523,6 @@ export class Human {
     const target = delta.multiply(wq);
     const local = bone.parent.getWorldQuaternion(_p3).invert().multiply(target);
     bone.quaternion.slerp(local, w);
-    bone.updateMatrixWorld(true);
   }
 
   arm(side, u, f, w, roll = 0) {
@@ -536,7 +534,6 @@ export class Human {
     if (roll) {
       _q1.setFromAxisAngle(_a.copy(b[side + '_Hand'].position).normalize(), roll * (side === 'R' ? 1 : -1) * w);
       b[side + '_Hand'].quaternion.multiply(_q1);
-      b[side + '_Hand'].updateMatrixWorld(true);
     }
   }
 
@@ -564,7 +561,6 @@ export class Human {
       this.pointBone(b[s + '_Calf'], b[s + '_Foot'], _e.set(k * 0.05, -Math.cos(bb), -Math.sin(bb)).normalize(), w);
       // keep the feet flat on the floor
       foot.quaternion.copy(foot.parent.getWorldQuaternion(_q3).invert().multiply(fq));
-      foot.updateMatrixWorld(true);
     }
   }
 
@@ -592,7 +588,7 @@ export class Human {
     const k = Math.min(1, dt * 7);
     this.ly += (ty - this.ly) * k; this.lp += (tp - this.lp) * k;
     if (Math.abs(this.ly) < 0.004 && Math.abs(this.lp) < 0.004) return;
-    const parts = [[b.Spine2, 0.14, 0.05], [b.Neck, 0.36, 0.4], [b.Head, 0.5, 0.55]];
+    const parts = [[b.Neck, 0.45, 0.4], [b.Head, 0.55, 0.6]];
     for (const [bone, ky, kp] of parts) {
       _q2.setFromAxisAngle(AY, this.ly * ky);
       _q3.setFromAxisAngle(AX, -this.lp * kp);
@@ -626,7 +622,6 @@ export class Human {
     // the fall replaces everything else
     if (this.downT > 0) { this.applyFall(); return; }
     if (this.model.rotation.x !== 0 || this.model.position.y !== 0 || this.model.position.z !== 0) { this.model.rotation.x = 0; this.model.position.set(0, 0, 0); }
-    if (near) this.model.updateMatrixWorld(true);
     if (!near) return;
     if (this.crouchD > 0.005) this.crouch(this.crouchD);
     // torso: forward lean (sprint), breathing, dance sway, cower hunch, slump, hit
@@ -636,7 +631,6 @@ export class Human {
       if (ow.dance > 0.01) { yaw += Math.sin(t * 6.2 + this.danceStyle) * 0.22 * ow.dance; roll += Math.sin(t * 3.1) * 0.08 * ow.dance; pitch += Math.sin(t * 6.2) * 0.05 * ow.dance; }
       if (this.recoil > 0) pitch -= 0.06 * this.recoil;
       if (this.hit) { const h = this.hit, e = Math.exp(-h.t * 5) * Math.sin(Math.min(1, h.t / 0.09) * Math.PI / 2); pitch += -h.z * 0.28 * h.s * e; roll += h.x * 0.14 * h.s * e; yaw += h.x * 0.1 * h.s * e; }
-      pitch += Math.sin(t * 1.7) * 0.006; // breathing
       if (Math.abs(pitch) + Math.abs(yaw) + Math.abs(roll) > 0.004) {
         _q2.setFromAxisAngle(AX, pitch); _q3.setFromAxisAngle(AY, yaw); _q2.multiply(_q3); _q3.setFromAxisAngle(AZ, roll); _q2.multiply(_q3);
         this.rotBone(b.Spine, _q1.copy(_q2).slerp(_q4.identity(), 0.5), 1);
@@ -699,6 +693,7 @@ export class Human {
     if (this.props.tray && this.props.tray.visible) {
       const tr = this.props.tray, hand = b.L_Hand;
       tr.position.set(0, 0, 0);
+      this.model.updateWorldMatrix(true, false);
       hand.updateWorldMatrix(true, false);
       // hand-local position ~11 cm along the fingers, then flatten
       const wp = _a.set(11, 0.5, 0).applyMatrix4(hand.matrixWorld);
