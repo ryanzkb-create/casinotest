@@ -61,7 +61,7 @@ def inline(html: str, with_three=False) -> str:
         return f"<script{attrs}>\n{code}\n</script>"
 
     html = re.sub(r'<link rel="stylesheet" href="(css/[^"]+)">', css, html)
-    assert MODULE in html, "3D engine module tag not found in index.html"
+    assert MODULE in html, "3D engine module tag not found in play.html"
     engine = bundle_engine(with_three)
     if with_three:  # everything is bundled: drop the CDN import map
         html = re.sub(r'\s*<script type="importmap">.*?</script>', "", html, flags=re.S)
@@ -100,11 +100,11 @@ def main():
             shutil.rmtree(out_dir)
         (out_dir / "assets").mkdir(parents=True)
         out = out_dir / "index.html"
-        out.write_text(inline((ROOT / "index.html").read_text(), with_three=True))
+        out.write_text(inline((ROOT / "play.html").read_text(), with_three=True))
         shutil.copytree(ROOT / "assets", out_dir / "assets", dirs_exist_ok=True)
         print(f"wrote {out} ({out.stat().st_size // 1024} KB)")
         return
-    html = inline((ROOT / "index.html").read_text())
+    html = inline((ROOT / "play.html").read_text())
     if len(sys.argv) > 2 and sys.argv[1] == "--web":
         out_dir = Path(sys.argv[2])
         out_dir.mkdir(parents=True, exist_ok=True)

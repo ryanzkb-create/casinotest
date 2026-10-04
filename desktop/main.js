@@ -1,6 +1,7 @@
 // Golden Mirage for macOS: the web game in its own window, served from the app
 // bundle (works offline) through a private app:// scheme.
-const { app, BrowserWindow, protocol, net, ipcMain, Menu, shell } = require('electron');
+const { app, BrowserWindow, protocol, net, ipcMain, Menu, shell, dialog } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const { pathToFileURL } = require('url');
 
@@ -24,6 +25,26 @@ function createWindow() {
   win.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
   win.webContents.on('will-navigate', (e, url) => { if (!url.startsWith('app://')) { e.preventDefault(); shell.openExternal(url); } });
   win.loadURL('app://game/index.html');
+  setupUpdates(win);
+}
+
+// Updates: the app checks GitHub Releases at start-up and every few hours, downloads
+// a newer version in the background and offers to restart. The game autosaves, so
+// restarting never loses progress.
+function setupUpdates(win) {
+  if (!app.isPackaged) return;
+  autoUpdater.autoDownload = true;
+  autoUpdater.on('update-downloaded', info => {
+    dialog.showMessageBox(win, {
+      type: 'info', buttons: ['Restart now', 'Later'], defaultId: 0, cancelId: 1,
+      message: `Golden Mirage ${info.version} is ready`,
+      detail: 'Restart to finish updating. Your game is saved automatically.',
+    }).then(r => { if (r.response === 0) autoUpdater.quitAndInstall(); });
+  });
+  autoUpdater.on('error', err => console.warn('update check failed:', err && err.message));
+  const check = () => autoUpdater.checkForUpdates().catch(() => {});
+  check();
+  setInterval(check, 4 * 60 * 60 * 1000);
 }
 
 // Browsers only allow pointer lock inside a click or key press, and never on Esc.

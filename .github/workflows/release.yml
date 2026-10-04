@@ -1,0 +1,62 @@
+# Publishes a new Mac app version. Tag a commit to release it:
+#   git tag v1.0.1 && git push origin v1.0.1
+# The build is signed, notarized (when the Apple secrets work) and attached to a
+# GitHub Release together with latest-mac.yml, which installed apps read to update
+# themselves. See the secrets list in mac-app.yml.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish, e.g. 1.0.1 (without the v)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-14
+    timeout-minutes: 60
+    env:
+      HAVE_CERT: ${{ secrets.MAC_CERT_P12 != '' }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - name: Set version
+        working-directory: desktop
+        shell: bash
+        run: |
+          V="${{ github.event.inputs.version }}"
+          if [ -z "$V" ]; then V="${GITHUB_REF_NAME#v}"; fi
+          npm version --no-git-tag-version --allow-same-version "$V"
+      - name: Install
+        working-directory: desktop
+        run: npm ci || npm install
+      - name: Publish (signed and notarized)
+        if: env.HAVE_CERT == 'true'
+        working-directory: desktop
+        shell: bash
+        env:
+          CSC_LINK: ${{ secrets.MAC_CERT_P12 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if ! npm run release -- -c.mac.hardenedRuntime=true -c.mac.notarize=true; then
+            echo "::warning::Apple notarization failed; publishing a signed but not notarized build. Check APPLE_ID and APPLE_APP_SPECIFIC_PASSWORD."
+            npm run release -- -c.mac.hardenedRuntime=true -c.mac.notarize=false
+          fi
+      - name: Publish (ad-hoc signed, no Apple secrets)
+        if: env.HAVE_CERT != 'true'
+        working-directory: desktop
+        run: npm run release -- -c.mac.identity=- -c.mac.hardenedRuntime=false

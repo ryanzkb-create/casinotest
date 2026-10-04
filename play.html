@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Golden Mirage</title>
+  <meta name="description" content="A 3D casino life simulator that shows why gambling always loses money.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;600&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/feel.css">
+</head>
+<body>
+  <canvas id="game3d" class="hidden"></canvas>
+  <canvas id="game"></canvas>
+  <div id="bubbles"></div>
+  <div id="hurt"></div>
+  <div id="crosshair" class="hidden"><i></i><i></i><i></i><i></i></div>
+  <div id="stick"><div id="stick-knob"></div></div>
+
+  <!-- Top right: money, debt, time, weapon (GTA style) -->
+  <div id="hud-top">
+    <div class="hud-row">
+      <div id="weapon" title="Unarmed">✋</div>
+      <div class="money-block">
+        <div id="h-cash" class="cash"></div>
+        <div class="debt-line"><span>DEBT</span> <b id="h-debt"></b></div>
+      </div>
+    </div>
+    <div id="heat" title="Tony's heat"></div>
+    <div class="sub-line"><span id="h-time"></span> · <span class="tier">🎟 <span id="h-tier"></span></span></div>
+    <div class="sub-line net">NET <b id="h-net"></b></div>
+    <div id="debt-meter" class="hidden" title="Game over at $1,000,000 debt">
+      <div class="meter"><div id="b-debt"></div></div>
+      <small>DEBT LIMIT $1M</small>
+    </div>
+  </div>
+
+  <!-- Bottom left: radar + health, armour and needs -->
+  <div id="hud-radar">
+    <canvas id="minimap"></canvas>
+    <div class="hbars">
+      <div class="hbar health" title="Health"><div id="b-health"></div></div>
+      <div class="hbar armor" title="Armor"><div id="b-armor"></div></div>
+    </div>
+    <div class="vitals">
+      <div class="vital" title="Hunger"><span>🍔</span><div class="bar"><div id="b-hunger" class="fill hunger"></div></div></div>
+      <div class="vital" title="Thirst"><span>💧</span><div class="bar"><div id="b-thirst" class="fill thirst"></div></div></div>
+      <div class="vital" title="Energy"><span>⚡</span><div class="bar"><div id="b-energy" class="fill energy"></div></div></div>
+    </div>
+  </div>
+
+  <div id="corner-buttons">
+    <button id="helpBtn" title="How to play">?</button>
+  </div>
+  <div id="action-buttons">
+    <button id="sprintBtn" class="touch-only" title="Sprint">RUN</button>
+    <button id="aimBtn" class="touch-only" title="Aim">AIM</button>
+    <button id="fireBtn" class="hidden" title="Fire (F)">FIRE</button>
+    <button id="weaponBtn" title="Switch weapon (Q)">Q</button>
+    <button id="phoneBtn" title="Phone (P)">📱<span id="badge" class="hidden">0</span></button>
+  </div>
+
+  <div id="zone"></div>
+  <div id="prompt" class="hidden"></div>
+  <div id="toasts"></div>
+
+  <div id="modal" class="hidden">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h2 id="modal-title"></h2>
+        <button id="modal-close" title="Close (Esc)">✕</button>
+      </div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <div id="phone" class="hidden">
+    <div class="phone-frame">
+      <div class="phone-notch"><span id="phone-time"></span><button id="phone-close">✕</button></div>
+      <div id="phone-screen"></div>
+    </div>
+  </div>
+
+  <!-- Seated casino game: GTA Online style instructional overlay -->
+  <div id="game-ui" class="hidden">
+    <div id="gu-panel">
+      <div id="gu-title"></div>
+      <div id="gu-info"></div>
+      <div id="gu-options" class="hidden"></div>
+      <div id="gu-bet">
+        <button id="gu-bet-down" title="Lower bet (↓)">−</button>
+        <div class="gu-bet-mid"><span>YOUR BET</span><b id="gu-bet-amt"></b><small id="gu-limits"></small></div>
+        <button id="gu-bet-up" title="Raise bet (↑)">+</button>
+      </div>
+    </div>
+    <div id="gu-buttons"></div>
+    <div id="gu-banner"></div>
+  </div>
+
+  <div id="tutorial" class="hidden">
+    <div class="tut-card">
+      <div id="tut-kicker"></div>
+      <h2 id="tut-title"></h2>
+      <div id="tut-body"></div>
+      <div id="tut-dots"></div>
+      <div class="tut-actions">
+        <button id="tut-skip" class="btn ghost">Skip</button>
+        <span></span>
+        <button id="tut-prev" class="btn">Back</button>
+        <button id="tut-next" class="btn primary">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="screen" class="hidden"></div>
+
+  <script src="js/state.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/npcs.js"></script>
+  <script src="js/combat.js"></script>
+  <script src="js/games.js"></script>
+  <script src="js/odds2.js"></script>
+  <script src="js/games2.js"></script>
+  <script src="js/games2b.js"></script>
+  <script src="js/phone.js"></script>
+  <script src="js/services.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/feel.js"></script>
+  <script src="js/gamepad.js"></script>
+  <script src="js/save.js"></script>
+  <script src="js/missions.js"></script>
+  <script src="js/main.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="js/r3d/main.js"></script>
+</body>
+</html>

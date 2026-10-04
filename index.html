@@ -2,146 +2,192 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <title>Golden Mirage</title>
-  <meta name="description" content="A 3D casino life simulator that shows why gambling always loses money.">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Golden Mirage: the house always wins</title>
+  <meta name="description" content="A realistic 3D Las Vegas casino game. Start with $2,000,000, play with real casino odds, and find out why gambling always loses money.">
+  <meta property="og:title" content="Golden Mirage: the house always wins">
+  <meta property="og:description" content="Start with $2,000,000. Real casino odds. See how long it lasts.">
+  <meta property="og:image" content="img/hero.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;600&display=swap">
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/feel.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+  <style>
+    :root {
+      --bg: #0b0a10; --panel: #15131c; --line: #2a2634; --text: #f1eee8; --muted: #a39fae;
+      --gold: #f2c14e; --gold-dim: #a8842c; --pink: #ff4f8b; --lose: #ff5a62; --win: #72d572;
+      --display: "Anton", "Arial Narrow", Impact, sans-serif;
+      --label: "Barlow Condensed", "Arial Narrow", sans-serif;
+      --body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--body); font-size: 17px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+    a { color: inherit; }
+    .wrap { width: min(1120px, 100% - 32px); margin-inline: auto; }
+    h1, h2 { font-family: var(--display); font-weight: 400; letter-spacing: .5px; line-height: 1.02; margin: 0; text-wrap: balance; }
+    .kicker { font-family: var(--label); font-weight: 700; font-size: 14px; letter-spacing: .22em; text-transform: uppercase; color: var(--pink); }
+    nav { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding-block: 18px; }
+    .brand { font-family: var(--display); font-size: 22px; letter-spacing: 1px; color: var(--gold); text-decoration: none; }
+    nav .links { display: flex; gap: 18px; font-family: var(--label); font-weight: 600; font-size: 17px; letter-spacing: .04em; text-transform: uppercase; }
+    nav .links a { text-decoration: none; color: var(--muted); }
+    nav .links a:hover { color: var(--text); }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 26px; border-radius: 6px; border: 1px solid var(--gold-dim); background: transparent; color: var(--text); font-family: var(--label); font-weight: 700; font-size: 19px; letter-spacing: .05em; text-transform: uppercase; text-decoration: none; cursor: pointer; }
+    .btn:hover { border-color: var(--gold); }
+    .btn.primary { background: linear-gradient(180deg, #ffd978, #d9a21f); color: #1b1200; border-color: #ffe7a6; }
+    .btn.primary:hover { filter: brightness(1.06); }
+    .btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+    .hero { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; padding-block: 28px 56px; }
+    .hero h1 { font-size: clamp(52px, 9vw, 112px); color: var(--gold); text-shadow: 0 0 40px rgba(242,193,78,.28); }
+    .hero p.lead { font-size: clamp(18px, 2.2vw, 22px); max-width: 34em; color: #ddd9e2; margin: 18px 0 26px; }
+    .cta { display: flex; flex-wrap: wrap; gap: 12px; }
+    .shot { border-radius: 10px; border: 1px solid var(--line); overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,.6); background: #000; }
+    .shot img { display: block; width: 100%; height: auto; }
+    @media (min-width: 960px) { .hero { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: center; } }
+    section { padding-block: 56px; border-top: 1px solid var(--line); }
+    section h2 { font-size: clamp(34px, 5vw, 54px); margin: 8px 0 12px; }
+    section .sub { color: var(--muted); max-width: 40em; margin: 0 0 30px; }
+    .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 16px; }
+    .gallery figure { margin: 0; }
+    .gallery figcaption { font-family: var(--label); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; font-size: 15px; color: var(--muted); padding-top: 8px; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+    table { width: 100%; border-collapse: collapse; min-width: 560px; }
+    th, td { text-align: left; padding: 12px 18px; border-bottom: 1px solid var(--line); }
+    th { font-family: var(--label); font-weight: 700; font-size: 14px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+    tr:last-child td { border-bottom: 0; }
+    td.edge { font-family: var(--display); font-size: 22px; color: var(--lose); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    td small { color: var(--muted); display: block; }
+    .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 16px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; }
+    .card h3 { margin: 0 0 6px; font-family: var(--label); font-size: 21px; letter-spacing: .04em; text-transform: uppercase; color: var(--gold); }
+    .card p { margin: 0; color: #cfcbd8; font-size: 16px; }
+    .dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; margin-top: 8px; }
+    .dl .card { display: flex; flex-direction: column; gap: 14px; }
+    .dl .meta { color: var(--muted); font-size: 15px; }
+    ol.steps { margin: 18px 0 0; padding-left: 1.2em; color: #cfcbd8; }
+    ol.steps li { margin: 6px 0; }
+    code { background: #1d1a26; border: 1px solid var(--line); padding: 2px 7px; border-radius: 4px; font-size: .9em; user-select: all; }
+    footer { border-top: 1px solid var(--line); padding-block: 36px 52px; color: var(--muted); font-size: 15px; }
+    footer .help { background: rgba(255,90,98,.1); border: 1px solid rgba(255,90,98,.45); border-radius: 8px; padding: 14px 18px; margin-bottom: 22px; color: #f1d7d9; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  </style>
 </head>
 <body>
-  <canvas id="game3d" class="hidden"></canvas>
-  <canvas id="game"></canvas>
-  <div id="bubbles"></div>
-  <div id="hurt"></div>
-  <div id="crosshair" class="hidden"><i></i><i></i><i></i><i></i></div>
-  <div id="stick"><div id="stick-knob"></div></div>
+  <div class="wrap">
+    <nav>
+      <a class="brand" href="#top">GOLDEN MIRAGE</a>
+      <div class="links"><a href="#games">Games</a><a href="#download">Download</a><a href="play">Play</a></div>
+    </nav>
 
-  <!-- Top right: money, debt, time, weapon (GTA style) -->
-  <div id="hud-top">
-    <div class="hud-row">
-      <div id="weapon" title="Unarmed">✋</div>
-      <div class="money-block">
-        <div id="h-cash" class="cash"></div>
-        <div class="debt-line"><span>DEBT</span> <b id="h-debt"></b></div>
+    <header class="hero" id="top">
+      <div>
+        <div class="kicker">Las Vegas · The Strip · 8:00 PM</div>
+        <h1>The house always wins.</h1>
+        <p class="lead">You arrive with <strong>$2,000,000</strong>. Play slots, blackjack, roulette, craps and more at real casino odds. Eat, sleep, and watch what happens when the money runs low.</p>
+        <div class="cta">
+          <a class="btn primary" href="play">Play in your browser</a>
+          <a class="btn" href="#download">Download for Mac</a>
+        </div>
+      </div>
+      <div class="shot"><img src="img/hero.jpg" alt="Third-person view of the casino floor with a roulette table, dealers and gamblers under chandeliers" width="1280" height="720"></div>
+    </header>
+  </div>
+
+  <section id="games">
+    <div class="wrap">
+      <div class="kicker">Twelve ways to lose</div>
+      <h2>Real odds. Real house edge.</h2>
+      <p class="sub">Every game pays exactly as a real casino table or machine does. The percentage is what the casino keeps from every dollar you bet, on average, forever.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Game</th><th>How it works here</th><th>House edge</th></tr></thead>
+          <tbody>
+            <tr><td>Blackjack</td><td>Six decks, dealer hits soft 17, 6:5 blackjack<small>Split, double and insurance included</small></td><td class="edge">about 2%</td></tr>
+            <tr><td>Roulette</td><td>American wheel with 0 and 00</td><td class="edge">5.26%</td></tr>
+            <tr><td>Craps</td><td>Pass and Don't Pass, with free odds behind the line</td><td class="edge">1.4%</td></tr>
+            <tr><td>Baccarat</td><td>Player, Banker (5% commission) and Tie</td><td class="edge">1.06% to 14.4%</td></tr>
+            <tr><td>Video poker</td><td>Jacks or Better in three paytables</td><td class="edge">0.5% to 5%</td></tr>
+            <tr><td>Three card poker</td><td>Ante and Play, with Pair Plus</td><td class="edge">3.4% to 7.3%</td></tr>
+            <tr><td>Slot machines</td><td>Near misses and losses disguised as wins, as in the real thing</td><td class="edge">8%</td></tr>
+            <tr><td>Keno</td><td>Pick up to 10 of 80 numbers</td><td class="edge">25% to 30%</td></tr>
+            <tr><td>Sic bo</td><td>Three dice, a full betting slip</td><td class="edge">2.8% to 19%</td></tr>
+            <tr><td>Race book</td><td>Six runners; the bookmaker's cut is shown on the board</td><td class="edge">about 16%</td></tr>
+            <tr><td>Big Six wheel</td><td>The worst bet in the building</td><td class="edge">11% to 24%</td></tr>
+            <tr><td>Scratch cards</td><td>From the kiosk by the bar</td><td class="edge">about 37%</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
-    <div id="heat" title="Tony's heat"></div>
-    <div class="sub-line"><span id="h-time"></span> · <span class="tier">🎟 <span id="h-tier"></span></span></div>
-    <div class="sub-line net">NET <b id="h-net"></b></div>
-    <div id="debt-meter" class="hidden" title="Game over at $1,000,000 debt">
-      <div class="meter"><div id="b-debt"></div></div>
-      <small>DEBT LIMIT $1M</small>
-    </div>
-  </div>
+  </section>
 
-  <!-- Bottom left: radar + health, armour and needs -->
-  <div id="hud-radar">
-    <canvas id="minimap"></canvas>
-    <div class="hbars">
-      <div class="hbar health" title="Health"><div id="b-health"></div></div>
-      <div class="hbar armor" title="Armor"><div id="b-armor"></div></div>
-    </div>
-    <div class="vitals">
-      <div class="vital" title="Hunger"><span>🍔</span><div class="bar"><div id="b-hunger" class="fill hunger"></div></div></div>
-      <div class="vital" title="Thirst"><span>💧</span><div class="bar"><div id="b-thirst" class="fill thirst"></div></div></div>
-      <div class="vital" title="Energy"><span>⚡</span><div class="bar"><div id="b-energy" class="fill energy"></div></div></div>
-    </div>
-  </div>
-
-  <div id="corner-buttons">
-    <button id="helpBtn" title="How to play">?</button>
-  </div>
-  <div id="action-buttons">
-    <button id="sprintBtn" class="touch-only" title="Sprint">RUN</button>
-    <button id="aimBtn" class="touch-only" title="Aim">AIM</button>
-    <button id="fireBtn" class="hidden" title="Fire (F)">FIRE</button>
-    <button id="weaponBtn" title="Switch weapon (Q)">Q</button>
-    <button id="phoneBtn" title="Phone (P)">📱<span id="badge" class="hidden">0</span></button>
-  </div>
-
-  <div id="zone"></div>
-  <div id="prompt" class="hidden"></div>
-  <div id="toasts"></div>
-
-  <div id="modal" class="hidden">
-    <div class="modal-box">
-      <div class="modal-head">
-        <h2 id="modal-title"></h2>
-        <button id="modal-close" title="Close (Esc)">✕</button>
+  <section>
+    <div class="wrap">
+      <div class="kicker">More than a casino</div>
+      <h2>Survive the night. Or the week.</h2>
+      <p class="sub">Hunger, thirst and energy keep dropping. The casino gives you comps while you lose, and the people around you have stories.</p>
+      <div class="cols">
+        <div class="card"><h3>Debt</h3><p>Out of cash? A bank offers a legal loan. A loan shark offers more, at 10% a day. Miss a payment and his crew finds you.</p></div>
+        <div class="card"><h3>The Strip at night</h3><p>Robbers wait for big winners. Buy a gun, aim over the shoulder, and find out how that goes.</p></div>
+        <div class="card"><h3>How casinos hook you</h3><p>Free play offers, a credit line, a host who texts you. The game shows the real expected loss behind each one.</p></div>
+        <div class="card"><h3>Your career</h3><p>Autosave, 31 honest achievements, and an ending that adds up exactly where the money went.</p></div>
       </div>
-      <div id="modal-body"></div>
-    </div>
-  </div>
-
-  <div id="phone" class="hidden">
-    <div class="phone-frame">
-      <div class="phone-notch"><span id="phone-time"></span><button id="phone-close">✕</button></div>
-      <div id="phone-screen"></div>
-    </div>
-  </div>
-
-  <!-- Seated casino game: GTA Online style instructional overlay -->
-  <div id="game-ui" class="hidden">
-    <div id="gu-panel">
-      <div id="gu-title"></div>
-      <div id="gu-info"></div>
-      <div id="gu-options" class="hidden"></div>
-      <div id="gu-bet">
-        <button id="gu-bet-down" title="Lower bet (↓)">−</button>
-        <div class="gu-bet-mid"><span>YOUR BET</span><b id="gu-bet-amt"></b><small id="gu-limits"></small></div>
-        <button id="gu-bet-up" title="Raise bet (↑)">+</button>
+      <div class="gallery" style="margin-top:28px">
+        <figure><div class="shot"><img src="img/roulette.jpg" loading="lazy" alt="Roulette win banner over a close-up of the table" width="1280" height="720"></div><figcaption>Roulette</figcaption></figure>
+        <figure><div class="shot"><img src="img/keno.jpg" loading="lazy" alt="Keno board on the wall screen" width="1280" height="720"></div><figcaption>Keno</figcaption></figure>
+        <figure><div class="shot"><img src="img/strip.jpg" loading="lazy" alt="The Strip by day with palm trees, casino facades and traffic" width="1280" height="720"></div><figcaption>The Strip</figcaption></figure>
       </div>
     </div>
-    <div id="gu-buttons"></div>
-    <div id="gu-banner"></div>
-  </div>
+  </section>
 
-  <div id="tutorial" class="hidden">
-    <div class="tut-card">
-      <div id="tut-kicker"></div>
-      <h2 id="tut-title"></h2>
-      <div id="tut-body"></div>
-      <div id="tut-dots"></div>
-      <div class="tut-actions">
-        <button id="tut-skip" class="btn ghost">Skip</button>
-        <span></span>
-        <button id="tut-prev" class="btn">Back</button>
-        <button id="tut-next" class="btn primary">Next</button>
+  <section id="download">
+    <div class="wrap">
+      <div class="kicker">Best on a Mac</div>
+      <h2>Download the app</h2>
+      <p class="sub">The Mac app runs at full retina quality, works offline, updates itself, and lets Esc return you to mouse look. It needs macOS 11 or newer.</p>
+      <div class="dl">
+        <div class="card">
+          <h3>Apple Silicon</h3>
+          <div class="meta">M1, M2, M3, M4</div>
+          <a class="btn primary" id="dl-arm" href="https://github.com/ryanzkb-create/casinotest/releases/latest">Download for Apple Silicon</a>
+        </div>
+        <div class="card">
+          <h3>Intel</h3>
+          <div class="meta">Macs from before late 2020</div>
+          <a class="btn" id="dl-x64" href="https://github.com/ryanzkb-create/casinotest/releases/latest">Download for Intel</a>
+        </div>
       </div>
+      <p class="meta" id="dl-version" style="margin-top:16px;color:var(--muted)">Not sure which Mac you have? Apple menu, then About This Mac. A chip named M-something means Apple Silicon.</p>
+      <ol class="steps">
+        <li>Open the downloaded <code>.dmg</code> and drag Golden Mirage into Applications.</li>
+        <li>Open it. If macOS says it can't verify the app, go to System Settings, Privacy &amp; Security, and choose Open Anyway.</li>
+        <li>After that, the app keeps itself up to date.</li>
+      </ol>
+      <p style="margin-top:22px"><a class="btn" href="play">Or play in your browser</a></p>
     </div>
-  </div>
+  </section>
 
-  <div id="screen" class="hidden"></div>
+  <footer>
+    <div class="wrap">
+      <div class="help"><strong>Gambling problem?</strong> Call or text 1-800-GAMBLER (US) or visit gamblersanonymous.org. Golden Mirage uses no real money, and its odds match real casinos to show that, over time, the house wins.</div>
+      <div>3D people from the Microsoft Rocketbox avatar library (MIT), engine by three.js. Full credits and licenses are in the <a href="https://github.com/ryanzkb-create/casinotest#credits-and-licenses">project README</a>.</div>
+    </div>
+  </footer>
 
-  <script src="js/state.js"></script>
-  <script src="js/ui.js"></script>
-  <script src="js/layout.js"></script>
-  <script src="js/world.js"></script>
-  <script src="js/npcs.js"></script>
-  <script src="js/combat.js"></script>
-  <script src="js/games.js"></script>
-  <script src="js/odds2.js"></script>
-  <script src="js/games2.js"></script>
-  <script src="js/games2b.js"></script>
-  <script src="js/phone.js"></script>
-  <script src="js/services.js"></script>
-  <script src="js/audio.js"></script>
-  <script src="js/feel.js"></script>
-  <script src="js/gamepad.js"></script>
-  <script src="js/save.js"></script>
-  <script src="js/missions.js"></script>
-  <script src="js/main.js"></script>
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-    }
-  }
+  <script>
+    // Point the download buttons at the newest release (falls back to the releases page).
+    (function () {
+      var repo = 'ryanzkb-create/casinotest';
+      fetch('https://api.github.com/repos/' + repo + '/releases/latest', { headers: { Accept: 'application/vnd.github+json' } })
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+        .then(function (rel) {
+          var dmgs = (rel.assets || []).filter(function (a) { return /\.dmg$/i.test(a.name); });
+          var arm = dmgs.find(function (a) { return /arm64/i.test(a.name); });
+          var x64 = dmgs.find(function (a) { return !/arm64/i.test(a.name); });
+          if (arm) document.getElementById('dl-arm').href = arm.browser_download_url;
+          if (x64) document.getElementById('dl-x64').href = x64.browser_download_url;
+          if (rel.tag_name) document.getElementById('dl-version').textContent = 'Version ' + rel.tag_name.replace(/^v/, '') + '. Not sure which Mac you have? Apple menu, then About This Mac. A chip named M-something means Apple Silicon.';
+        })
+        .catch(function () { /* keep the releases-page links */ });
+    })();
   </script>
-  <script type="module" src="js/r3d/main.js"></script>
 </body>
 </html>

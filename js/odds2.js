@@ -3,7 +3,7 @@
 // ---------------------------------------------------------------------------
 // Pure maths for the second wave of casino games (video poker, three card poker,
 // keno, sic bo, race book, scratch cards). No DOM: the same file is loaded by the
-// game (index.html) and by the Monte-Carlo checks in tools/odds/, so the house
+// game (play.html) and by the Monte-Carlo checks in tools/odds/, so the house
 // edges we print are measured on the exact code that pays you.
 // Cards are { r: 'A'..'K', s: '♠♥♦♣' } like js/games.js.
 // ---------------------------------------------------------------------------

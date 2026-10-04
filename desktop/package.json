@@ -8,7 +8,8 @@
   "scripts": {
     "game": "cd .. && python3 tools/build_single.py --app desktop/game",
     "start": "npm run game && electron .",
-    "dist": "npm run game && electron-builder --mac --publish never"
+    "dist": "npm run game && electron-builder --mac --publish never",
+    "release": "npm run game && electron-builder --mac --publish always"
   },
   "devDependencies": {
     "electron": "^33.4.11",
@@ -36,12 +37,30 @@
             "arm64",
             "x64"
           ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
         }
       ],
       "gatekeeperAssess": false
     },
     "dmg": {
       "title": "Golden Mirage"
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "ryanzkb-create",
+        "repo": "casinotest",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
   }
 }

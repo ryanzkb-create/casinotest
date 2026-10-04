@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
   push:
     branches: [claude/gracious-ptolemy-y0h94n]
-    paths: ['desktop/**', 'js/**', 'css/**', 'index.html', 'assets/**', 'tools/build_single.py', '.github/workflows/mac-app.yml']
+    paths: ['desktop/**', 'js/**', 'css/**', 'play.html', 'assets/**', 'tools/build_single.py', '.github/workflows/mac-app.yml']
 
 jobs:
   build:
