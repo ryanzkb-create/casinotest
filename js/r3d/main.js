@@ -14,7 +14,7 @@ import * as TX from './tex.js';
 import { initMaterials, buildShell, buildProps, Batcher, tableData, drawJackpot, W, K, getSlotMaterials, CEIL, MAT } from './build.js';
 import { buildStreet, drawPylon, LANE_Z } from './street.js';
 import { decodeAnimLibrary, prepareAvatar } from './people.js';
-import { Crowd, AVATAR_FILES } from './crowd.js';
+import { Crowd, AVATAR_FILES, AVATAR_LAZY } from './crowd.js';
 import { TableFX } from './tablefx.js';
 
 const canvas = document.getElementById('game3d');
@@ -97,6 +97,16 @@ async function loadAll(onProgress) {
   }));
   onProgress(1);
   return out;
+}
+
+// one asset, on demand (background avatar loading)
+async function loadOne(path) {
+  if (window.__ASSETS && window.__ASSETS[path]) return b64ToBuffer(window.__ASSETS[path]);
+  const suffix = window.__ASSET_SUFFIX || '';
+  const res = await fetch(path + suffix);
+  if (!res.ok) throw new Error('Failed to load ' + path);
+  const buf = await res.arrayBuffer();
+  return suffix ? b64ToBuffer(new TextDecoder().decode(buf)) : buf;
 }
 
 function parseGLB(buffer) {
@@ -209,9 +219,11 @@ async function init() {
   resize();
   canvas.classList.remove('hidden');
   document.getElementById('game').classList.add('hidden');
-  window.Render3D._dbg = { THREE, renderer, scene, bloom, sun, hemi, camera, composer, envInterior, envExterior, gradePass };
+  window.Render3D._dbg = { crowd, THREE, renderer, scene, bloom, sun, hemi, camera, composer, envInterior, envExterior, gradePass };
   window.Render3D.ready = true;
   if (window.onRender3DReady) window.onRender3DReady();
+  // the rest of the avatars stream in while the game is already running
+  crowd.streamAvatars(AVATAR_LAZY, async f => (await parseGLB(await loadOne(`assets/people/${f}.glb`))).scene);
 }
 
 function setupPost() {
@@ -544,6 +556,10 @@ function setView(v) {
 window.Render3D = {
   ready: false, render, resize, aimPick, setView,
   gesture: (e, kind) => crowd && crowd.gesture(e, kind),
+  // people API (see the header of crowd.js)
+  dealerGesture: (t, kind, opts) => (crowd ? crowd.dealerGesture(t, kind, opts) : 0),
+  react: (e, kind, secs) => crowd && crowd.react(e, kind, secs),
+  tableReact: (table, kind) => crowd && crowd.tableReact(table, kind),
   tables: () => tables,
   cameraYaw: () => view.yaw,
   quality: QUALITY,

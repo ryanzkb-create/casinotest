@@ -145,9 +145,13 @@ The more you bet, the more "free" stuff you get: free drinks (Silver), free buff
 
 Either way you can start again with $2M, and the house will win again.
 
+## People API (for game code)
+
+`Render3D.dealerGesture(tableOrDealer, kind, {toward})` with kind `deal flip collect payout shuffle spin throw wave` (returns seconds); `Render3D.react(entity, kind)` with `cheer clap groan sip nod shake shrug wave flinch cower`; `Render3D.tableReact(table, 'win'|'bigwin'|'lose')`. NPC fields read by the renderer (`activity`, `carry`, `gait`, `look`, `seated`, `pose`) are listed at the top of `js/r3d/crowd.js`.
+
 ## Credits and licenses
 
-- 3D people and animations: [Microsoft Rocketbox Avatar Library](https://github.com/microsoft/Microsoft-Rocketbox) (MIT). Converted to compressed glTF, animations repacked into `assets/anims.bin`.
+- 3D people and animations: [Microsoft Rocketbox Avatar Library](https://github.com/microsoft/Microsoft-Rocketbox) (MIT, Copyright (c) Microsoft Corporation). 40 avatars (business, casual, party, chef, security, police) converted to simplified, quantized glTF in `assets/people/`; the motion-capture clips are repacked into `assets/anims.bin`. Clothes/hair variation, head look-at, blinking, gestures and reactions are procedural (`js/r3d/people.js`).
 - Car: "Ferrari 458 Italia" by [vicent091036](https://sketchfab.com/models/57bf6cc56931426e87494f554df1dab6), as shipped with the [three.js examples](https://github.com/mrdoob/three.js/tree/dev/examples/models/gltf), interior removed.
 - Lighting: `royal_esplanade` and `venice_sunset` HDR environments from the three.js examples (from HDRI Haven / Poly Haven, CC0), downsampled.
 - Sofa and chair: `GlamVelvetSofa` and `ChairDamaskPurplegold` from the [Khronos glTF Sample Assets](https://github.com/KhronosGroup/glTF-Sample-Assets) (© 2021 Wayfair LLC, CC BY 4.0).
