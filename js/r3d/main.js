@@ -11,11 +11,13 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import * as TX from './tex.js';
-import { initMaterials, buildShell, buildProps, Batcher, tableData, drawJackpot, W, K, getSlotMaterials, CEIL, MAT } from './build.js';
+import { initMaterials, buildShell, buildProps, Batcher, tableData, drawJackpot, W, K, getSlotMaterials, CEIL, MAT, CHANDELIERS } from './build.js';
 import { buildStreet, drawPylon, LANE_Z } from './street.js';
 import { decodeAnimLibrary, prepareAvatar } from './people.js';
 import { Crowd, AVATAR_FILES, AVATAR_LAZY } from './crowd.js';
 import { TableFX } from './tablefx.js';
+import { buildAtmosphere, updateAtmosphere } from './atmo.js';
+import { buildFloorReflection } from './reflect.js';
 
 const canvas = document.getElementById('game3d');
 const MOBILE = matchMedia('(pointer: coarse)').matches || Math.min(innerWidth, innerHeight) < 600;
@@ -43,7 +45,7 @@ const QUALITY = (() => {
 
 let renderer, scene, camera, composer, bloom, gtao, smaa, gradePass;
 let sun, hemi, sky, stars, envInterior, envExterior, envNight;
-let crowd, tables;
+let crowd, tables, atmo, floorRefl;
 const dyn = { scene: null, ads: [], jackpots: [], bigWheels: [], nightMats: [], nightLights: [], trafficLights: [], neon: [], cars: [] };
 const clock = { t: 0, last: 0 };
 
@@ -200,12 +202,16 @@ async function init() {
   const avatarJobs = AVATAR_FILES.map(f => parseOr(assets['p:' + f], 'avatar ' + f));
   const [sofa, chair, car] = await Promise.all([parseOr(assets.sofa, 'sofa'), parseOr(assets.chair, 'chair'), parseOr(assets.car, 'car')]);
   const models = { sofa, chair, car };
+  dyn.hi = QUALITY.level >= 2;
   const batch = new Batcher();
   buildShell(scene, batch, dyn);
   buildProps(scene, batch, dyn, models);
   dyn.streetSpots = QUALITY.spots;
   buildStreet(scene, batch, dyn, models);
   batch.build(scene);
+  dyn.door = { x: W((DOOR.x1 + DOOR.x2) / 2), z: W(CASINO_BOTTOM), w: W(DOOR.x2 - DOOR.x1) };
+  if (dyn.hi) floorRefl = buildFloorReflection(scene, ZONES, 90, 49.8);
+  atmo = buildAtmosphere(scene, dyn, CHANDELIERS, QUALITY);
 
   // people
   const lib = decodeAnimLibrary(assets.anims);
@@ -219,7 +225,7 @@ async function init() {
   resize();
   canvas.classList.remove('hidden');
   document.getElementById('game').classList.add('hidden');
-  window.Render3D._dbg = { crowd, THREE, renderer, scene, bloom, sun, hemi, camera, composer, envInterior, envExterior, gradePass };
+  window.Render3D._dbg = { crowd, THREE, renderer, scene, bloom, sun, hemi, camera, composer, envInterior, envExterior, gradePass, floorRefl, atmo, dyn };
   window.Render3D.ready = true;
   if (window.onRender3DReady) window.onRender3DReady();
   // the rest of the avatars stream in while the game is already running
@@ -242,14 +248,23 @@ function setupPost() {
   bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.45, 0.3, 4.2);
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
+  // colour grade: gentle filmic contrast, warm highlights / cool shadows, lens fringing and vignette
+  // (Medium and up), plus film grain that hides banding in the dark gradients
+  const fringe = QUALITY.level >= 1;
   gradePass = new ShaderPass({
-    uniforms: { tDiffuse: { value: null }, uVignette: { value: 0.28 }, uSat: { value: 1.12 }, uContrast: { value: 1.06 }, uWarm: { value: 0.02 }, uHurt: { value: 0 } },
+    uniforms: { tDiffuse: { value: null }, uVignette: { value: 0.3 }, uSat: { value: 1.1 }, uContrast: { value: 1.07 }, uWarm: { value: 0.02 }, uHurt: { value: 0 }, uTime: { value: 0 }, uGrain: { value: QUALITY.level >= 1 ? 0.03 : 0.018 } },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-    fragmentShader: `uniform sampler2D tDiffuse; uniform float uVignette, uSat, uContrast, uWarm, uHurt; varying vec2 vUv;
-      void main(){ vec4 c = texture2D(tDiffuse, vUv); vec3 col = c.rgb;
+    fragmentShader: `uniform sampler2D tDiffuse; uniform float uVignette, uSat, uContrast, uWarm, uHurt, uTime, uGrain; varying vec2 vUv;
+      float hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+      void main(){ vec2 d = vUv - 0.5; float r2 = dot(d, d);
+        vec4 c = texture2D(tDiffuse, vUv); vec3 col = c.rgb;
+        ${fringe ? 'col.r = texture2D(tDiffuse, vUv + d * r2 * 0.006).r; col.b = texture2D(tDiffuse, vUv - d * r2 * 0.006).b;' : ''}
         float l = dot(col, vec3(0.299,0.587,0.114)); col = mix(vec3(l), col, uSat);
-        col = (col - 0.5) * uContrast + 0.5; col.r += uWarm; col.b -= uWarm * 0.5;
-        vec2 d = vUv - 0.5; float v = 1.0 - dot(d, d) * uVignette * 2.2; col *= v;
+        col = (col - 0.5) * uContrast + 0.5;
+        col *= mix(vec3(0.95, 1.0, 1.06), vec3(1.05, 1.0, 0.93), smoothstep(0.1, 0.8, l));   // split tone
+        col.r += uWarm; col.b -= uWarm * 0.5;
+        col *= 1.0 - r2 * uVignette * 2.2;
+        col += (hash(vUv * 1024.0 + fract(uTime) * 91.7) - 0.5) * uGrain * (1.0 - l * 0.6);
         col = mix(col, vec3(l * 0.6 + 0.2, 0.0, 0.0), uHurt * 0.4);
         gl_FragColor = vec4(col, c.a); }`,
   });
@@ -335,6 +350,14 @@ function updateEnvironment(dt) {
   for (const n of dyn.nightMats) n.m.emissiveIntensity = n.day + (n.night - n.day) * (1 - day);
   for (const n of dyn.nightLights) n.l.intensity = n.day + (n.night - n.day) * (1 - day);
   if (dyn.mountains) dyn.mountains.color.set(day > 0.3 ? '#a898a0' : '#2a2438');
+  dyn.day = day; dyn.insideMix = insideMix;
+  if (dyn.wetRoad) {
+    // damp patches (and their reflections) only at night; by day the asphalt is uniformly dry
+    const wet = !inside && day < 0.35;
+    if (dyn.wetRoad.userData.wet !== wet) { dyn.wetRoad.userData.wet = wet; dyn.wetRoad.roughnessMap = wet ? dyn.wetRoad.userData.puddles : null; dyn.wetRoad.needsUpdate = true; }
+    dyn.wetRoad.roughness = wet ? 0.85 - 0.25 * (1 - day) : 0.95;
+  }
+  if (dyn.wetGlowMat) dyn.wetGlowMat.opacity = inside ? 0 : Math.max(0, 1 - day * 1.8);
   if (bloom) bloom.strength = inside ? 0.5 : 0.35 + (1 - day) * 0.3;
 }
 
@@ -421,6 +444,9 @@ function render(time) {
   tables.update(dt, t);
   updateDynamic(dt, t);
   updateFX();
+  if (floorRefl) floorRefl.visible = player.y < CASINO_BOTTOM - 10;
+  updateAtmosphere(atmo, t, insideMix, dyn.day || 0, renderer.getPixelRatio());
+  gradePass.uniforms.uTime.value = t;
   gradePass.uniforms.uHurt.value = Math.max(0, 1 - (S.health || 100) / 40) * 0.6;
   renderer.shadowMap.needsUpdate = renderer.shadowMap.enabled && (frameN++ % shadowEvery === 0);
   composer.render(dt);
@@ -499,7 +525,12 @@ function updateDynamic(dt, t) {
   }
   for (const w of dyn.bigWheels) w.rotation.z += dt * 0.6;
   MAT.bulb.emissiveIntensity = 4.6 + Math.sin(t * 7) * 0.5;
-  for (const n of dyn.neon) n.emissiveIntensity = Math.sin(t * 2.1) > 0.985 ? 1.2 : 5;
+  // neon: a faint buzz, and each sign occasionally stutters on its own
+  for (const n of dyn.neon) {
+    const stutter = Math.sin(t * (1.3 + n.seed) + n.seed * 13) > 0.988 && Math.sin(t * 31 + n.seed) > -0.2;
+    n.m.emissiveIntensity = n.base * (stutter ? 0.2 : 0.95 + 0.05 * Math.sin(t * 41 + n.seed * 5));
+  }
+  if (dyn.beacons) dyn.beacons.emissiveIntensity = (t % 1.6) < 0.25 ? 4 : 0.15;
   // traffic lights
   const phase = (t % 20) / 20;
   for (const lamps of dyn.trafficLights) {

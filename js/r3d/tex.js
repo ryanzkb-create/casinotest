@@ -22,6 +22,63 @@ export function canvasTex(w, h, draw, o = {}) {
   return t;
 }
 
+
+// ---------------------------------------------------------------------------
+// PBR detail maps generated from a colour canvas: height (luminance + fine noise)
+// -> tangent-space normal map, and a roughness map. Sampling wraps so tiles stay
+// seamless. Runs once at load (a few ms per 1024px map).
+// ---------------------------------------------------------------------------
+function readPixels(tex) {
+  const c = tex.image, g = c.getContext('2d');
+  return { w: c.width, h: c.height, d: g.getImageData(0, 0, c.width, c.height).data };
+}
+function repeatLike(t, src) {
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.copy(src.repeat);
+  t.anisotropy = MAX_ANISO.v; t.colorSpace = THREE.NoColorSpace;
+  return t;
+}
+export function normalMapFrom(src, { strength = 2, noise = 0, blur = 1, invert = false } = {}) {
+  const { w, h, d } = readPixels(src);
+  let ht = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) ht[i] = (0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2]) / 255 + (noise ? (rnd() - 0.5) * noise : 0);
+  for (let pass = 0; pass < blur; pass++) {   // cheap wrap-around box blur keeps the slopes gentle
+    const o = new Float32Array(w * h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const xm = (x + w - 1) % w, xp = (x + 1) % w, ym = (y + h - 1) % h, yp = (y + 1) % h;
+      o[y * w + x] = (ht[y * w + x] * 4 + ht[y * w + xm] + ht[y * w + xp] + ht[ym * w + x] + ht[yp * w + x]) / 8;
+    }
+    ht = o;
+  }
+  const c = makeCanvas(w, h), g = c.getContext('2d'), out = g.createImageData(w, h);
+  const k = strength * (invert ? -1 : 1);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const xm = (x + w - 1) % w, xp = (x + 1) % w, ym = (y + h - 1) % h, yp = (y + 1) % h;
+    const dx = (ht[y * w + xp] - ht[y * w + xm]) * k, dy = (ht[yp * w + x] - ht[ym * w + x]) * k;
+    const il = 1 / Math.hypot(dx, dy, 1), i = (y * w + x) * 4;
+    out.data[i] = (-dx * il * 0.5 + 0.5) * 255; out.data[i + 1] = (dy * il * 0.5 + 0.5) * 255; out.data[i + 2] = (il * 0.5 + 0.5) * 255; out.data[i + 3] = 255;
+  }
+  g.putImageData(out, 0, 0);
+  return repeatLike(new THREE.CanvasTexture(c), src);
+}
+// fn(luminance 0..1, x, y) -> roughness multiplier 0..1 (material.roughness scales it)
+export function roughMapFrom(src, fn, size = 512) {
+  const { w, h, d } = readPixels(src);
+  const c = makeCanvas(size, size), g = c.getContext('2d'), out = g.createImageData(size, size);
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    const sx = (x * w / size) | 0, sy = (y * h / size) | 0, si = (sy * w + sx) * 4;
+    const v = Math.max(0, Math.min(1, fn((0.299 * d[si] + 0.587 * d[si + 1] + 0.114 * d[si + 2]) / 255, x, y))) * 255, i = (y * size + x) * 4;
+    out.data[i] = out.data[i + 1] = out.data[i + 2] = v; out.data[i + 3] = 255;
+  }
+  g.putImageData(out, 0, 0);
+  return repeatLike(new THREE.CanvasTexture(c), src);
+}
+// smooth low-frequency value noise (0..1), tiles at `period` cells
+export function cloud(x, y, period = 8) {
+  const f = (a, b) => { const n = Math.sin(((a % period + period) % period) * 127.1 + ((b % period + period) % period) * 311.7) * 43758.5453; return n - Math.floor(n); };
+  const xi = Math.floor(x), yi = Math.floor(y), u = x - xi, v = y - yi, su = u * u * (3 - 2 * u), sv = v * v * (3 - 2 * v);
+  return f(xi, yi) * (1 - su) * (1 - sv) + f(xi + 1, yi) * su * (1 - sv) + f(xi, yi + 1) * (1 - su) * sv + f(xi + 1, yi + 1) * su * sv;
+}
+
 function grain(g, w, h, n, a, size = 2) {
   for (let i = 0; i < n; i++) {
     const v = rnd() * 255 | 0;
@@ -47,7 +104,7 @@ const CARPETS = {
   carpetTables: { base: '#0e2a26', a: '#e0b04a', b: '#b8325a', c: '#2f9fb0', d: '#6a2c8a' },
   carpetBlue: { base: '#101a3c', a: '#d8a848', b: '#3aa0c8', c: '#b83a78', d: '#2e5a9a' },
 };
-export function carpetTex(kind, repeat) {
+export function carpetTex(kind, repeat = [1, 1]) {
   const p = CARPETS[kind] || CARPETS.carpet;
   return canvasTex(1024, 1024, (g, w, h) => {
     g.fillStyle = p.base; g.fillRect(0, 0, w, h);
@@ -103,7 +160,7 @@ export function carpetTex(kind, repeat) {
   }, { repeat });
 }
 
-export function marbleTex(kind, repeat) {
+export function marbleTex(kind, repeat = [1, 1]) {
   const dark = kind === 'marbleDark';
   return canvasTex(1024, 1024, (g, w, h) => {
     const tile = 512;
@@ -111,11 +168,17 @@ export function marbleTex(kind, repeat) {
       const x0 = tx * tile, y0 = ty * tile;
       const grd = g.createLinearGradient(x0, y0, x0 + tile, y0 + tile);
       if (dark) { grd.addColorStop(0, '#15120f'); grd.addColorStop(1, '#221c16'); }
-      else { grd.addColorStop(0, '#d6cbbb'); grd.addColorStop(1, '#c4b6a2'); }
+      else { grd.addColorStop(0, '#cdbfab'); grd.addColorStop(1, '#b3a38c'); }
       g.fillStyle = grd; g.fillRect(x0, y0, tile, tile);
       g.save(); g.beginPath(); g.rect(x0, y0, tile, tile); g.clip();
+      // soft mottling so neighbouring slabs differ
+      for (let i = 0; i < 26; i++) {
+        const bx = x0 + rnd() * tile, by = y0 + rnd() * tile, br = 40 + rnd() * 110, gr = g.createRadialGradient(bx, by, 0, bx, by, br);
+        const dk = rnd() < 0.5; gr.addColorStop(0, dark ? (dk ? 'rgba(0,0,0,0.35)' : 'rgba(120,95,60,0.14)') : (dk ? 'rgba(90,70,50,0.16)' : 'rgba(255,248,235,0.2)')); gr.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = gr; g.fillRect(x0, y0, tile, tile);
+      }
       for (let i = 0; i < 16; i++) {
-        g.strokeStyle = dark ? `rgba(210,170,90,${0.15 + rnd() * 0.35})` : `rgba(120,110,100,${0.1 + rnd() * 0.3})`;
+        g.strokeStyle = dark ? `rgba(210,170,90,${0.15 + rnd() * 0.35})` : `rgba(110,96,84,${0.12 + rnd() * 0.38})`;
         g.lineWidth = 0.6 + rnd() * 2.2;
         g.beginPath();
         let x = x0 + rnd() * tile, y = y0;
@@ -132,7 +195,35 @@ export function marbleTex(kind, repeat) {
   }, { repeat });
 }
 
-export function woodTex(repeat) {
+// Colour + normal (+ roughness) maps for a floor kind, generated once and shared between zones
+const _pbr = {};
+export function floorPBR(kind, repeat) {
+  if (!_pbr[kind]) {
+    const carpet = kind.startsWith('carpet'), wood = kind === 'wood';
+    const map = carpet ? carpetTex(kind) : wood ? woodTex() : marbleTex(kind);
+    _pbr[kind] = { map, normalMap: normalMapFrom(map, carpet ? { strength: 2.6, noise: 0.5, blur: 0 } : wood ? { strength: 1.6, blur: 0 } : { strength: 0.5, blur: 2 }), roughnessMap: carpet || wood ? null : marbleRoughMap(map) };
+  }
+  const out = {};
+  for (const [k, t] of Object.entries(_pbr[kind])) if (t) { const c = t.clone(); c.repeat.set(repeat[0], repeat[1]); c.needsUpdate = true; out[k] = c; }
+  return out;
+}
+
+export function marbleRoughMap(map) {
+  return roughMapFrom(map, (l, x, y) => 0.32 + cloud(x / 64, y / 64, 8) * 0.4 + (l < 0.12 ? 0.3 : 0) + (x % 256 < 3 || y % 256 < 3 ? 0.4 : 0));
+}
+
+// pebbled leather grain (only ever used as a normal map)
+export function leatherGrain(repeat) {
+  return canvasTex(256, 256, (g, w, h) => {
+    g.fillStyle = '#808080'; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 1400; i++) {
+      const x = rnd() * w, y = rnd() * h, r = 2 + rnd() * 3, v = 150 + rnd() * 90 | 0;
+      wrapDraw(w, h, x, y, r, (cx, cy) => { const gr = g.createRadialGradient(cx, cy, 0, cx, cy, r); gr.addColorStop(0, `rgb(${v},${v},${v})`); gr.addColorStop(1, 'rgba(128,128,128,0)'); g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, r, 0, 7); g.fill(); });
+    }
+  }, { repeat, linear: true });
+}
+
+export function woodTex(repeat = [1, 1]) {
   return canvasTex(512, 512, (g, w, h) => {
     for (let i = 0; i < 16; i++) {
       const y = i * 32;
