@@ -34,10 +34,12 @@ jobs:
         working-directory: desktop
         run: npm ci
       - name: Build .dmg (ad-hoc signed)
+        shell: bash
         if: env.HAVE_CERT != 'true'
         working-directory: desktop
-        run: npm run dist -- -c.mac.identity=- -c.mac.hardenedRuntime=false
+        run: npm run dist -- -c.mac.identity=- -c.mac.hardenedRuntime=false 2>&1 | tee build.log; test ${PIPESTATUS[0]} -eq 0
       - name: Build .dmg (Developer ID signed and notarized)
+        shell: bash
         if: env.HAVE_CERT == 'true'
         working-directory: desktop
         env:
@@ -46,7 +48,13 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: npm run dist -- -c.mac.hardenedRuntime=true -c.mac.notarize=true
+        run: npm run dist -- -c.mac.hardenedRuntime=true -c.mac.notarize=true 2>&1 | tee build.log; test ${PIPESTATUS[0]} -eq 0
+      - name: Show build errors
+        if: failure()
+        working-directory: desktop
+        run: |
+          # secrets are masked by GitHub; surface the tail of the log as annotations
+          tail -n 40 build.log | sed 's/%/%25/g' | while IFS= read -r line; do echo "::error::${line:0:400}"; done
       - uses: actions/upload-artifact@v4
         with:
           name: golden-mirage-mac
