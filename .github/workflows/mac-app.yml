@@ -49,10 +49,10 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          if ! (npm run dist -- -c.mac.hardenedRuntime=true -c.mac.notarize=true 2>&1 | tee build.log; test ${PIPESTATUS[0]} -eq 0); then
+          if ! (npm run dist -- '-c.mac.identity=Kunbo Zhao (C73KJYS4BP)' -c.mac.hardenedRuntime=true -c.mac.notarize=true 2>&1 | tee build.log; test ${PIPESTATUS[0]} -eq 0); then
             echo "::warning::Apple notarization failed (see the errors above). Check APPLE_ID and APPLE_APP_SPECIFIC_PASSWORD. Building a signed but not notarized app instead."
             grep -iE "401|invalid credentials|notar" build.log | head -3 | sed 's/^/::warning::/' | cut -c1-300
-            npm run dist -- -c.mac.hardenedRuntime=true -c.mac.notarize=false
+            npm run dist -- '-c.mac.identity=Kunbo Zhao (C73KJYS4BP)' -c.mac.hardenedRuntime=true -c.mac.notarize=false
           fi
       - name: Show build errors
         if: failure()

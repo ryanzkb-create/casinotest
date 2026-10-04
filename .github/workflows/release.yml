@@ -52,12 +52,12 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          if ! (npm run release -- -c.mac.hardenedRuntime=true -c.mac.notarize=true 2>&1 | tee build.log; test ${PIPESTATUS[0]} -eq 0); then
+          if ! (npm run release -- '-c.mac.identity=Kunbo Zhao (C73KJYS4BP)' -c.mac.hardenedRuntime=true -c.mac.notarize=true 2>&1 | tee build.log; test ${PIPESTATUS[0]} -eq 0); then
             echo "::warning::Apple notarization failed; publishing a signed but not notarized build."
             # Apple's rejection report: one annotation with the path and message of every issue
             DETAIL=$(grep -E '"(path|message)"' build.log | sed 's/^ *//' | cut -c1-230 | head -24 | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"}{print}')
             echo "::warning title=Apple notarization issues::${DETAIL}"
-            npm run release -- -c.mac.hardenedRuntime=true -c.mac.notarize=false
+            npm run release -- '-c.mac.identity=Kunbo Zhao (C73KJYS4BP)' -c.mac.hardenedRuntime=true -c.mac.notarize=false
           fi
       - name: Publish (ad-hoc signed, no Apple secrets)
         if: env.HAVE_CERT != 'true'
