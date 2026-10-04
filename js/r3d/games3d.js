@@ -99,7 +99,7 @@ function vpMachine(o, scene, batch) {
   const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.465), screenMat(attractTex('videopoker', o.pay, { table: o.pay, pays: Odds2.VP_PAYS[o.pay] })));
   scr.position.set(0, 1.42, 0.153); scr.rotation.x = -0.22;
   fr.add(scr); scene.add(fr); fr.updateMatrixWorld(true);
-  registerScreen(o, 'videopoker', fr, scr, { eye: [-0.2, 1.5, 0.82], look: [-0.2, 1.37, 0.14], fov: 44 });
+  registerScreen(o, 'videopoker', fr, scr, { eye: [-0.27, 1.68, 0.98], look: [-0.27, 1.42, 0.14], fov: 46 });
   const s = seatOf(o); chairAt(batch, s.x, s.y, s.face, MAT.velvetBlue, 0.62);
 }
 
@@ -133,7 +133,7 @@ function lotteryKiosk(o, scene, batch) {
   const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.54, 0.405), screenMat(attractTex('lottery', '', null)));
   scr.position.set(0, 1.15, 0.235); scr.rotation.x = -0.15;
   fr.add(scr); scene.add(fr); fr.updateMatrixWorld(true);
-  registerScreen(o, 'lottery', fr, scr, { eye: [-0.19, 1.4, 0.8], look: [-0.19, 1.15, 0.2], fov: 44 });
+  registerScreen(o, 'lottery', fr, scr, { eye: [-0.24, 1.55, 0.98], look: [-0.24, 1.15, 0.2], fov: 46 });
   const s = seatOf(o); chairAt(batch, s.x, s.y, s.face, MAT.velvet, 0.62);
 }
 
@@ -175,7 +175,7 @@ function shapeTopGeo(shape, w, d) {
 
 // Three Card Poker felt: bet circles are laid out in local table metres and the
 // same coordinates are used to drop chips on them (td.spots).
-const TCP_SPOTS = { ante: [-0.2, 0.6, 0.14], play: [0.24, 0.6, 0.14], pp: [-0.72, 0.5, 0.17] };
+const TCP_SPOTS = { ante: [-0.26, 0.6, 0.14], play: [0.18, 0.6, 0.14], pp: [0.66, 0.5, 0.17] };
 function tcpFelt(w, d) {
   const CW = 1600, CH = Math.round(1600 * d / w);
   const fc = (x, z) => [(x / w + 0.5) * CW, ((z + 0.45 * d) / d) * CH];
@@ -203,7 +203,7 @@ function tcpFelt(w, d) {
       g.fillText(name === 'pp' ? 'PAIR' : name.toUpperCase(), cx, cy - (name === 'pp' ? rr * 0.25 : 0)); if (name === 'pp') g.fillText('PLUS', cx, cy + rr * 0.3);
     }
     g.fillStyle = '#ff9bd0'; g.font = `700 ${CW * 0.016}px Georgia, serif`;
-    g.fillText('SF 40 · 3K 30 · STR 6 · FL 3 · PAIR 1', ...fc(-0.72, 0.72));
+    g.fillText('SF 40 · 3K 30 · STR 6 · FL 3 · PAIR 1', ...fc(0.62, 0.74));
   });
 }
 

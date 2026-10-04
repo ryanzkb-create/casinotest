@@ -25,14 +25,14 @@ const METHODS = {
     if (o.type === 'keno' || o.type === 'racebook') {
       // frontal view of the wall board, shifted so it clears the left-hand panel
       const wall = NEWGAME.walls[wallKind(o)]; if (!wall) return null;
-      const race = o.type === 'racebook', sh = race ? 1.15 : 0.95;
+      const race = o.type === 'racebook', sh = race ? 0.35 : 0.4;
       const pos = wall.frame.localToWorld(new THREE.Vector3(-sh, 1.4, 3.3));   // in front of the seated player's head
       const look = wall.frame.localToWorld(new THREE.Vector3(-sh, wall.cy - (race ? 0.45 : 0.3), 0));
       return { pos, look, fov: race ? 58 : 50 };
     }
     if (o.type === 'threecard') {
       const td = this.td(o); if (!td) return null;
-      return { pos: this.L(td, -0.3, 1.5, td.d * 0.5 + 0.48), look: this.L(td, -0.3, td.feltY, 0.1), fov: 54 };
+      return { pos: this.L(td, -0.25, 1.55, td.d * 0.5 + 0.5), look: this.L(td, -0.25, td.feltY, 0.12), fov: 54 };
     }
     if (o.type === 'sicbo') {
       const td = this.td(o); if (!td) return null;
