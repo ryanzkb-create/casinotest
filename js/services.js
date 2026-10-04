@@ -4,6 +4,8 @@ const INTERACT_LABELS = {
   slots: 'Play slot machine', roulette: 'Play roulette', blackjack: 'Play blackjack',
   blackjack_hl: 'Play VIP blackjack', baccarat: 'Play baccarat', baccarat_hl: 'Play VIP baccarat',
   craps: 'Play craps', bigsix: 'Spin the Big Six wheel',
+  videopoker: 'Play video poker', threecard: 'Play Three Card Poker', keno: 'Play keno', sicbo: 'Play Sic Bo',
+  racebook: 'Bet on the horse races', lottery: 'Buy scratch cards',
   hotdog: 'Buy a hot dog', buffet: 'Eat at the buffet', steak: 'Dine at the steakhouse',
   bar: 'Order a drink', hotel: 'Get a hotel room', cashier: 'Visit the cashier', atm: 'Use the ATM',
   fountain: 'Drink water', tap: 'Drink from tap', poster: 'Read the poster', noclock: 'Look around',
@@ -15,7 +17,7 @@ function interactLabel(o) { return INTERACT_LABELS[o.type] || 'Interact'; }
 function interact(o) {
   if (modalOpen || phoneOpen || screenOpen || S.ended) return;
   clearMovement();
-  const gambling = ['slots', 'roulette', 'blackjack', 'blackjack_hl', 'baccarat', 'baccarat_hl', 'craps', 'bigsix'];
+  const gambling = ['slots', 'roulette', 'blackjack', 'blackjack_hl', 'baccarat', 'baccarat_hl', 'craps', 'bigsix', ...NEW_GAME_TYPES];
   if (gambling.includes(o.type) && S.cash < 1) {
     infoDialog('Out of money', `<p>You don't have any cash left to gamble.</p>
       <p>Check your 📱 <b>phone</b> for loan options… or maybe it's time to stop.</p>`);
@@ -39,6 +41,7 @@ function interact(o) {
     case 'pawn': return pawnShop();
     case 'busstop': return busStop();
     case 'gunstore': return gunStore();
+    default: if (NEW_GAME_TYPES.includes(o.type)) return startGame(o);   // games2.js
   }
 }
 

@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import * as TX from './tex.js';
+import { buildNewGameProp, buildNewGameSigns } from './games3d.js';
 
 export const K = 0.05;
 export const W = v => v * K;
@@ -861,6 +862,7 @@ export function buildProps(scene, batch, dyn, models) {
       case 'elevator': elevator(batch, o); break;
       case 'podium': podium(batch, o); break;
       case 'jackpotSign': jackpotSign(o, dyn); break;
+      default: buildNewGameProp(t, o, scene, batch); break;   // js/r3d/games3d.js: video poker, keno, race book, scratch, 3-card, sic bo
       case 'sofa': case 'armchair': {
         const src = t === 'sofa' ? models.sofa : models.chair;
         if (!src) break;
@@ -878,6 +880,7 @@ export function buildProps(scene, batch, dyn, models) {
       }
     }
   }
+  buildNewGameSigns(scene, batch);
   // decorative plants
   for (const [x, z] of [[40.2, 36.4], [49.8, 36.4], [40.2, 48.6], [49.8, 48.6], [16.5, 48.8], [35.5, 48.8], [69.5, 48.8], [75.5, 34.8], [88.8, 34.8], [69.5, 18.2], [0.8, 36.6], [89.2, 36.6]]) plant(batch, x, z, 1.1);
 }

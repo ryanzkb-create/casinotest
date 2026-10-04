@@ -59,7 +59,7 @@ function makeNPC(role, x, y, opts = {}) {
   }, opts);
 }
 
-const DEALER_TABLES = ['blackjack', 'blackjack_hl', 'baccarat', 'baccarat_hl', 'roulette', 'craps', 'bigsix'];
+const DEALER_TABLES = ['blackjack', 'blackjack_hl', 'baccarat', 'baccarat_hl', 'roulette', 'craps', 'bigsix', 'threecard', 'sicbo'];
 const CHAIR_H = { slots: 0.62, table: 0.72, bar: 0.78 };
 
 function spawnNPCs() {
@@ -81,6 +81,10 @@ function spawnNPCs() {
     if (o.type === 'slots' && Math.random() < 0.3) {
       const s = slotSeat(o);
       npcs.push(makeNPC('gambler', s.x, s.y, { face: s.face, pose: 'sit', seated: true, slot: o, seatY: CHAIR_H.slots - 0.48 }));
+    }
+    if (MACHINE_TYPES.includes(o.type) && Math.random() < 0.3) {
+      const s = seatOf(o);
+      npcs.push(makeNPC('gambler', s.x, s.y, { face: s.face, pose: 'sit', seated: true, seatY: CHAIR_H.slots - 0.48 }));
     }
     if (o.type === 'bar') {
       // bartender works inside the ring

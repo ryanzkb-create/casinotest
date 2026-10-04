@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { tableData, ROULETTE_ORDER, W, objFrame } from './build.js';
 import * as TX from './tex.js';
+import { installFX2 } from './tablefx2.js';
 
 const CARD_W = 0.095, CARD_H = 0.133;       // ~1.5x real cards so they read from the seat
 const CHIP_R = 0.031, CHIP_H = 0.0058;      // ~1.3x real size so stacks read from the seat
@@ -383,3 +384,4 @@ export class TableFX {
   }
   slotMessage(text, flash) { if (this.slot) { this.slot.screen.message = text; if (flash) this.slot.screen.flash = 2; } }
 }
+installFX2(TableFX);   // js/r3d/tablefx2.js: video poker, keno, race book, scratch cards, 3-card poker, sic bo

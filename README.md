@@ -47,7 +47,13 @@ Walk up to a slot machine or table and press `E` to sit down. The camera moves t
 | Change bet | `↑` / `↓` (or the − / + buttons) · `M` max bet on slots |
 | Choose a bet (roulette, baccarat, craps, Big Six) | `←` / `→` or click the options · `Z` / `X` picks a roulette number |
 | Play (spin, deal, roll) | `Enter` / `Space` |
-| Blackjack | `H` hit · `S` stand · `D` double |
+| Blackjack | `H` hit · `S` stand · `D` double · `X` split · `I` insurance |
+| Video poker | `Space` deal/draw · `1`–`5` hold · `H` hint |
+| Three Card Poker | `Enter` deal, then `Enter` play / `F` fold · `←→` Ante/Play, Pair Plus |
+| Keno | click numbers (or `←→` + `F`) · `Q` quick pick · `C` clear · `Space` draw |
+| Sic Bo | `←→` bet type · `Z`/`X` number · `Enter` add bet · `Space` roll · `C` clear |
+| Race book | `←→` runner · `B` win/place · `Space` run the race |
+| Scratch cards | `Space` buy + scratch |
 | Tutorial / leave | `T` / `Esc` |
 
 ## Features
@@ -80,10 +86,28 @@ Camera shake on shots and hits, hit markers, a red vignette at low health, a slo
 | --- | --- |
 | Slot machines (with near-misses and "losses disguised as wins") | 8% |
 | American roulette (0 and 00) | 5.26% |
-| Blackjack (6:5 payout, dealer hits soft 17) and VIP Blackjack | ~2% |
+| Blackjack (6:5 payout, dealer hits soft 17; split and double supported) and VIP Blackjack | ~2% |
+| Blackjack Insurance side bet (offered on a dealer Ace) | 7.4% |
 | Craps (Pass / Don't Pass) | 1.41% / 1.36% |
-| Baccarat and VIP Baccarat (Player / Banker / Tie) | 1.24% / 1.06% / 14.4% |
+| Craps Odds bet behind the line (`O`) | 0% (true odds, but only after a line bet) |
+| Baccarat and VIP Baccarat (Player / Banker / Tie, with scoreboard) | 1.24% / 1.06% / 14.4% |
 | Big Six Wheel | 11% – 24% |
+| **Video Poker**, Jacks or Better (three paytables on the floor: 9/6, 8/5, 6/5) | 0.46% / 2.70% / 5.01% with perfect play (measured 0.65% / 3.06% / 5.19% with the in-game hold hint) |
+| **Three Card Poker**: Ante/Play · Pair Plus | 3.37% of the Ante (about 2% of money wagered) · 7.28% |
+| **Keno** (80 numbers, pick 1–10) | 25% – 29% depending on spots (exact per pick count) |
+| **Sic Bo** (bet slip): Small/Big · single · double · any triple · specific triple · totals | 2.78% · 7.87% · 18.5% · 13.9% · 16.2% · 9.7%–19% |
+| **Race Book** (6 runners, posted odds, overround shown) | about 16% Win · 15% Place (board adds to ~119%) |
+| **Scratch cards** | 36.6% |
+
+The new games are in the **Sportsbook & Keno Lounge** (south of the table pits, east of the entrance walkway: video poker bank, race book and keno terminals in front of big wall screens, scratch card kiosks) and in the table pits (Three Card Poker and Sic Bo, next to the Big Six wheel). Their odds live in `js/odds2.js` and are checked by scripts in `tools/odds/`, which load the same code that pays you:
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Video poker, 3M hands each with the in-game hold hint | `node tools/odds/poker.js 3000000 vp` | 9/6: 0.65% edge (published perfect play 0.46%) · 8/5: 3.06% (2.70%) · 6/5: 5.19% (5.01%). The hint is a strategy table, not a full solver, so it gives back a little more than perfect play |
+| Three Card Poker, 3M hands, Q-6-4 strategy | `node tools/odds/poker.js 3000000 tcp` | Ante/Play 3.34% of the Ante (1.99% of money wagered; published 3.37%) · Pair Plus 7.28% exact by enumerating all 22,100 hands |
+| Keno (exact hypergeometric + simulation), sic bo (exact over 216 outcomes + simulation), race book, scratch cards | `node tools/odds/keno_sicbo_scratch_race.js` | Keno 25.0% – 29.8% for 1–10 spots · Sic Bo as above · Race book win 16.4% / place 15.1%, board sums to 118.7% · Scratch cards 36.6% |
+| The real game code (`games.js`, `games2.js`, `games2b.js`) played headlessly, money conservation checked | `node tools/odds/headless_games.js 30000` | measured edges agree with the exact values within simulation noise |
+| Every seat and machine reachable from the entrance | `node tools/layout_check.js` | 237 interactive objects, 0 unreachable |
 
 ### Survival
 - **Hunger, thirst and energy** drop over time. If any of them hits zero you collapse, lose 12 hours and get a hospital bill.

@@ -134,6 +134,7 @@ function leaveGame(force) {
   if (!gameSession) return;
   if (gameSession.busy && !force) { banner('Finish this round first', 'info'); return; }
   const g = gameSession;
+  const GG = GAMES[tut(g.type)]; if (GG && GG.onLeave) GG.onLeave(g);   // games2.js: refund / forfeit an unfinished hand
   gameSession = null;
   const fx = T3();
   if (fx) { if (g.type === 'slots') fx.slotClose(); fx.clear(g.o); Render3D.setView(null); }
@@ -468,8 +469,9 @@ const BACCARAT = {
 // ---------------------------------------------------------------------------
 // CRAPS (pass 1.41%, don't pass 1.36%)
 // ---------------------------------------------------------------------------
+const CRAPS_ODDS = { 4: [2, 1], 5: [3, 2], 6: [6, 5], 8: [6, 5], 9: [3, 2], 10: [2, 1] };   // true odds paid on an Odds bet [num, den]
 const CRAPS = {
-  init: () => ({ point: null, stake: 0, dont: false, rolls: [] }),
+  init: () => ({ point: null, stake: 0, dont: false, rolls: [], odds: 0 }),
   options: g => [{ label: 'Pass Line', sub: '1:1' }, { label: "Don't Pass", sub: '1:1' }],
   info: g => `Come-out roll: <b>7 or 11</b> wins Pass, <b>2, 3, 12</b> loses. Any other number becomes <b>the point</b>: roll it again before a 7 to win. <b>House edge</b> 1.41% Pass · 1.36% Don't Pass.
     <div class="gu-hands"><div><span>POINT</span><b>${g.point || 'OFF'}</b><em>${g.stake ? (g.dont ? "Don't Pass " : 'Pass ') + fmt(g.stake) : ''}</em></div><div><span>ROLLS</span><b>${g.rolls.slice(-8).join(' · ') || '–'}</b></div></div>`,
@@ -501,10 +503,12 @@ const CRAPS = {
       const amount = g.stake;
       let ret = 0;
       if (outcome === 'push') ret = amount; else if ((outcome === 'pass') !== g.dont) ret = amount * 2;
-      const profit = settle(g.dont ? "Craps (Don't Pass)" : 'Craps (Pass)', amount, ret, g.dont ? 0.0136 : 0.0141);
+      const odds = g.odds || 0;   // free Odds bet behind the line (games2b.js): paid at true odds, 0% edge
+      if (odds && g.point) { const [n, d] = CRAPS_ODDS[g.point]; if ((outcome === 'pass') !== g.dont) ret += odds + (g.dont ? odds * d / n : odds * n / d); }
+      const profit = settle(g.dont ? "Craps (Don't Pass)" : 'Craps (Pass)', amount + odds, ret, (g.dont ? 0.0136 : 0.0141) * amount / (amount + odds));
       if (!gameSession) return;
       resultBanner(profit, `Rolled ${t}${g.point ? ` (point ${g.point})` : ''}`);
-      g.point = null; g.stake = 0; fx && fx.puck(g.o, null);
+      g.point = null; g.stake = 0; g.odds = 0; fx && fx.puck(g.o, null);
       if (fx) await fx.resolveChips(g.o, ret > amount, Math.max(0, ret - amount));
       g.busy = false; g.locked = false;
     }
